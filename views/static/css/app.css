@@ -359,13 +359,7 @@ body {
 }
 
 .dropdown-menu {
-    display: block !important; /* Force display for debugging */
-    background-color: blue !important; /* Temporary for debugging */
     position: absolute; /* Keep positioning */
-    top: 100%;
-    left: 0;
-    width: 100%;
-    z-index: 9999; /* Even higher z-index */
 }
 
 .dropdown-menu.show {

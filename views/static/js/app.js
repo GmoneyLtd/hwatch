@@ -155,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const deviceList = document.getElementById('device-list');
         deviceList.innerHTML = '';
         let selectedCount = 0;
-        console.log('Available devices:', data.available_devices);
         if (data.available_devices) {
             data.available_devices.forEach(device => {
                 const checkbox = document.createElement('input');
@@ -178,7 +177,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 deviceList.appendChild(div);
-                console.log('Device added:', device);
 
                 checkbox.addEventListener('change', () => {
                     label.querySelector('i').className = `fa-solid ${checkbox.checked ? 'fa-square-check' : 'fa-square'}`;
