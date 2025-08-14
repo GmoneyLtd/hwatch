@@ -152,6 +152,12 @@ body {
     border-bottom: 1px solid #e9ecef;
 }
 
+.data-table th:nth-last-child(-n+2),
+.data-table td:nth-last-child(-n+2) {
+    width: 120px; /* Adjust as needed */
+    text-align: center;
+}
+
 .data-table th {
     background: #f8f9fa;
     color: #212529;
@@ -315,54 +321,84 @@ body {
     background-size: 16px;
 }
 
-/* Device selector */
-.device-selector {
+/* Dropdown */
+.dropdown {
     position: relative;
-    width: 100%;
+    display: inline-block;
+    width: 100%; /* Ensure it takes full width of its parent */
 }
 
-.device-toggle {
+.dropdown-toggle {
     width: 100%;
-    padding: 6px 8px;
-    background: white;
+    text-align: left;
+    position: relative;
+    background-color: white;
+    color: #495057;
+    padding: 6px 12px;
     border: 1px solid #ced4da;
     border-radius: 4px;
-    text-align: left;
     cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* To push arrow to the right */
+    gap: 6px;
+    height: 30px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
-.device-dropdown {
-    position: absolute;
+.dropdown-toggle:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.dropdown-toggle:after {
+    content: "▼";
+    font-size: 7px;
+    color: #6c757d;
+}
+
+.dropdown-menu {
+    display: block !important; /* Force display for debugging */
+    background-color: blue !important; /* Temporary for debugging */
+    position: absolute; /* Keep positioning */
     top: 100%;
     left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    max-height: 200px;
-    overflow-y: auto;
-    margin-top: 5px;
+    width: 100%;
+    z-index: 9999; /* Even higher z-index */
 }
 
-.device-dropdown div {
-    padding: 10px 15px;
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 5px 8px;
+    font-size: 14px;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #e9ecef;
+    color: #333;
 }
 
-.device-dropdown div:last-child {
-    border-bottom: none;
+.dropdown-item:hover {
+    background-color: #f8f9fa;
 }
 
-.device-dropdown input {
-    margin-right: 10px;
+.dropdown-item input[type="checkbox"] {
+    display: none; /* Hide default checkbox */
+}
+
+.dropdown-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    width: 100%; /* Make label fill the item */
+}
+
+.dropdown-item label i {
+    margin-right: 8px;
+    font-size: 1.2em;
 }
 
 /* Chart container */

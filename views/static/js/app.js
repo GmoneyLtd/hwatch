@@ -154,6 +154,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // Update device options
         const deviceList = document.getElementById('device-list');
         deviceList.innerHTML = '';
+        let selectedCount = 0;
+        console.log('Available devices:', data.available_devices);
         if (data.available_devices) {
             data.available_devices.forEach(device => {
                 const checkbox = document.createElement('input');
@@ -161,17 +163,46 @@ document.addEventListener('DOMContentLoaded', function () {
                 checkbox.name = 'devices';
                 checkbox.value = device;
                 checkbox.id = `device-${device}`;
+                // Preserve selected state
+                const previouslySelected = chartForm.querySelector(`input[type="checkbox"][value="${device}"]:checked`);
+                if (previouslySelected) {
+                    checkbox.checked = true;
+                    selectedCount++;
+                }
                 
                 const label = document.createElement('label');
                 label.htmlFor = `device-${device}`;
-                label.textContent = device;
+                label.innerHTML = `<i class="fa-solid ${checkbox.checked ? 'fa-square-check' : 'fa-square'}"></i> ${device}`;
 
                 const div = document.createElement('div');
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 deviceList.appendChild(div);
+                console.log('Device added:', device);
+
+                checkbox.addEventListener('change', () => {
+                    label.querySelector('i').className = `fa-solid ${checkbox.checked ? 'fa-square-check' : 'fa-square'}`;
+                    updateDeviceCount();
+                });
             });
         }
+
+        const deviceCountSpan = document.getElementById('deviceCount');
+        function updateDeviceCount() {
+            selectedCount = chartForm.querySelectorAll('input[type="checkbox"][name="devices"]:checked').length;
+            deviceCountSpan.textContent = selectedCount;
+        }
+        updateDeviceCount(); // Initial count update
+
+        // Close dropdown when clicking outside
+        // Close dropdown when clicking outside and trigger data load
+        document.addEventListener('click', (event) => {
+            const dropdown = document.querySelector('.device-selector'); // Assuming .device-selector is the main container
+            if (dropdown && !dropdown.contains(event.target)) {
+                dropdownMenu.style.display = 'none';
+                loadChartData(); // Trigger data load on close
+            }
+        });
     }
 
 
@@ -250,14 +281,42 @@ document.addEventListener('DOMContentLoaded', function () {
     chartForm.addEventListener('change', handleChartFormChange);
 
     // Device dropdown in chart view
-    const deviceToggle = document.getElementById('device-toggle');
-    const deviceDropdown = document.getElementById('device-dropdown');
-    if(deviceToggle) {
-        deviceToggle.addEventListener('click', () => {
-            deviceDropdown.style.display = deviceDropdown.style.display === 'none' ? 'block' : 'none';
+    const dropdownToggle = document.getElementById('dropdownToggle');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    const deviceCountSpan = document.getElementById('deviceCount');
+
+    function updateDeviceCount() {
+        const checkedCount = chartForm.querySelectorAll('input[type="checkbox"][name="devices"]:checked').length;
+        deviceCountSpan.textContent = checkedCount;
+    }
+
+    if(dropdownToggle) {
+        dropdownToggle.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent document click from closing immediately
+            console.log('Dropdown toggle clicked!');
+            console.log('Current display:', dropdownMenu.style.display);
+            dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
+            console.log('New display:', dropdownMenu.style.display);
         });
     }
-    
+
+    // Close dropdown when clicking outside and trigger data load
+    document.addEventListener('click', (event) => {
+        const deviceSelector = document.querySelector('.device-selector');
+        if (deviceSelector && !deviceSelector.contains(event.target)) {
+            dropdownMenu.style.display = 'none';
+            loadChartData(); // Trigger data load on close
+        }
+    });
+
+    // Add change listener to checkboxes
+    chartForm.addEventListener('change', (event) => {
+        if (event.target.name === 'devices') {
+            updateDeviceCount();
+        }
+    });
+
     // Initial view
     switchView('dashboard-view');
+    updateDeviceCount(); // Initial count update
 });

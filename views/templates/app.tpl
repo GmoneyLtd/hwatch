@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ext-language_tools.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -92,10 +93,10 @@
                         <div class="filter-group">
                             <label for="chart-devices">Devices</label>
                             <div class="device-selector">
-                                <button type="button" class="device-toggle" id="device-toggle">
-                                    Select devices <span class="device-count" id="device-count">0</span>
+                                <button type="button" class="dropdown-toggle" id="dropdownToggle">
+                                    Select devices <span class="device-count" id="deviceCount">0</span>
                                 </button>
-                                <div class="device-dropdown" id="device-dropdown" style="display: none;">
+                                <div class="dropdown-menu" id="dropdownMenu" style="display: none;">
                                     <div id="device-list"></div>
                                 </div>
                             </div>
