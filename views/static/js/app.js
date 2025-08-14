@@ -170,16 +170,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
                 const label = document.createElement('label');
-                label.htmlFor = `device-${device}`;
-                label.innerHTML = `<i class="fa-solid ${checkbox.checked ? 'fa-square-check' : 'fa-square'}"></i> ${device}`;
+                label.appendChild(checkbox); // Append checkbox to label
+                label.appendChild(document.createTextNode(` ${device}`)); // Append text node to label
 
                 const div = document.createElement('div');
-                div.appendChild(checkbox);
-                div.appendChild(label);
+                div.appendChild(label); // Append the label (which contains checkbox and text) to div
                 deviceList.appendChild(div);
 
                 checkbox.addEventListener('change', () => {
-                    label.querySelector('i').className = `fa-solid ${checkbox.checked ? 'fa-square-check' : 'fa-square'}`;
                     updateDeviceCount();
                 });
             });
@@ -291,10 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if(dropdownToggle) {
         dropdownToggle.addEventListener('click', (event) => {
             event.stopPropagation(); // Prevent document click from closing immediately
-            console.log('Dropdown toggle clicked!');
-            console.log('Current display:', dropdownMenu.style.display);
             dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
-            console.log('New display:', dropdownMenu.style.display);
         });
     }
 
