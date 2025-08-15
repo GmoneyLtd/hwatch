@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (taskDropdownMenu) {
-            taskDropdownMenu.addEventListener('click', (event) => {
+            taskDropdownMenu.addEventListener('change', (event) => {
                 if (event.target.name === 'task') {
                     const selectedTask = event.target.value;
                     document.getElementById('chart-task').value = selectedTask;
@@ -123,11 +123,17 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         
         // 设备选择改变时触发数据加载
-        const deviceDropdown = document.getElementById('deviceDropdown');
-        if (deviceDropdown) {
-            // 移除已有的事件监听器（防止重复绑定）
-            deviceDropdown.removeEventListener('change', deviceChangeHandler);
-            deviceDropdown.addEventListener('change', deviceChangeHandler);
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        if (dropdownMenu) {
+            dropdownMenu.addEventListener('change', (event) => {
+                if (event.target.name === 'devices') {
+                    updateDeviceCount();
+                    loadChartData();
+                }
+            });
+            dropdownMenu.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent dropdown from closing when clicking on checkbox/label
+            });
         }
     }
     
@@ -147,16 +153,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Data Loading ---
 
     async function loadDashboardData() {
+        hideErrorMessage();
         try {
             const response = await fetch('/api/tasks');
             const tasks = await response.json();
             renderTasksTable(tasks);
         } catch (error) {
             console.error('Error loading dashboard data:', error);
+            displayErrorMessage('Failed to load dashboard data. Please try again.');
         }
     }
 
     async function loadConfigData() {
+        hideErrorMessage();
         try {
             const response = await fetch('/api/config');
             const config = await response.text();
@@ -165,10 +174,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (error) {
             console.error('Error loading config data:', error);
+            displayErrorMessage('Failed to load config data. Please try again.');
         }
     }
 
     async function loadChartData() {
+        hideErrorMessage();
         const formData = new FormData(chartForm);
         const params = new URLSearchParams(formData);
         
@@ -200,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateChartFilterOptions(data);
         } catch (error) {
             console.error('Error loading chart data:', error);
+            displayErrorMessage('Failed to load chart data. Please try again.');
         }
     }
     
@@ -275,6 +287,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        // 更新任务选项
+        taskDropdownMenu.innerHTML = '';
+        if (data.tasks && data.tasks.length > 0) {
+            data.tasks.forEach(task => {
+                const isChecked = (task === selectedTask);
+                const item = createDropdownItem('radio', 'task', task, `task-${task}`, task, isChecked);
+                if (isChecked) {
+                    taskDropdownToggle.textContent = task;
+                }
+                taskDropdownMenu.appendChild(item);
+            });
+        }
+
         // 更新设备选项
         const dropdownMenu = document.getElementById('dropdownMenu');
         const deviceDropdown = document.getElementById('deviceDropdown');
@@ -297,40 +322,9 @@ document.addEventListener('DOMContentLoaded', function () {
             dropdownMenu.innerHTML = '';
             
             data.available_devices.forEach(device => {
-                const div = document.createElement('div');
-                div.className = 'dropdown-item';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'devices';
-                checkbox.value = device;
-                checkbox.id = `device-${device}`;
-                
-                // 保持选中状态 - 检查之前选中的设备或新数据中的选中设备
-                if (data.selected_devices && data.selected_devices.includes(device)) {
-                    checkbox.checked = true;
-                } else if (currentlyCheckedDevices.has(device)) {
-                    checkbox.checked = true;
-                }
-                
-                const label = document.createElement('label');
-                label.htmlFor = `device-${device}`;
-                label.textContent = device;
-                
-                div.appendChild(checkbox);
-                div.appendChild(label);
-                dropdownMenu.appendChild(div);
-
-                // 添加事件监听器（使用命名函数避免重复绑定）
-                checkbox.removeEventListener('change', deviceCheckboxChangeHandler);
-                checkbox.addEventListener('change', deviceCheckboxChangeHandler);
-                
-                // 防止下拉菜单在点击复选框或标签时关闭
-                checkbox.removeEventListener('click', preventDropdownCloseHandler);
-                checkbox.addEventListener('click', preventDropdownCloseHandler);
-                
-                label.removeEventListener('click', preventDropdownCloseHandler);
-                label.addEventListener('click', preventDropdownCloseHandler);
+                const isChecked = (data.selected_devices && data.selected_devices.includes(device)) || currentlyCheckedDevices.has(device);
+                const item = createDropdownItem('checkbox', 'devices', device, `device-${device}`, device, isChecked);
+                dropdownMenu.appendChild(item);
             });
             
             // 更新设备计数
@@ -344,15 +338,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // 定义事件处理函数，避免重复绑定
-    function deviceCheckboxChangeHandler(event) {
-        updateDeviceCount();
-        loadChartData(); // 设备选择改变时加载图表数据
-    }
     
-    function preventDropdownCloseHandler(event) {
-        event.stopPropagation();
-    }
 
     function updateDeviceCount() {
         const dropdownMenu = document.getElementById('dropdownMenu');
@@ -376,6 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function handleTaskAction(event) {
         if (event.target.matches('[data-action]')) {
+            hideErrorMessage();
             const button = event.target;
             const device = button.dataset.device;
             const alias = button.dataset.alias;
@@ -386,12 +373,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 loadDashboardData();
             } catch (error) {
                 console.error(`Error ${action}ing task:`, error);
+                displayErrorMessage(`Failed to ${action} task. Please try again.`);
             }
         }
     }
 
     async function handleConfigSave(event) {
         event.preventDefault();
+        hideErrorMessage('config-error');
         const content = configEditor.getValue();
         try {
             const response = await fetch('/api/config', {
@@ -400,13 +389,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: content
             });
             if (response.ok) {
-                alert('Config saved successfully!');
+                displayErrorMessage('Config saved successfully!', 'config-error');
             } else {
                 const error = await response.json();
-                alert(`Error saving config: ${error.message}`);
+                displayErrorMessage(`Error saving config: ${error.message}`, 'config-error');
             }
         } catch (error) {
             console.error('Error saving config:', error);
+            displayErrorMessage('Failed to save config. Please try again.', 'config-error');
         }
     }
 
@@ -465,3 +455,44 @@ document.addEventListener('DOMContentLoaded', function () {
     // 初始视图
     switchView('dashboard-view');
 });
+
+function displayErrorMessage(message, elementId = 'general-error-message') {
+    const errorElement = document.getElementById(elementId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        // Hide after 5 seconds
+        setTimeout(() => {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        }, 5000);
+    }
+}
+
+function hideErrorMessage(elementId = 'general-error-message') {
+    const errorElement = document.getElementById(elementId);
+    if (errorElement) {
+        errorElement.style.display = 'none';
+        errorElement.textContent = '';
+    }
+}
+
+function createDropdownItem(type, name, value, id, textContent, isChecked) {
+    const div = document.createElement('div');
+    div.className = 'dropdown-item';
+    
+    const input = document.createElement('input');
+    input.type = type;
+    input.name = name;
+    input.value = value;
+    input.id = id;
+    input.checked = isChecked;
+    
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = textContent;
+    
+    div.appendChild(input);
+    div.appendChild(label);
+    return div;
+}
