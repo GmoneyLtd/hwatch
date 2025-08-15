@@ -84,20 +84,29 @@
                             <label for="chart-end">End</label>
                             <input type="datetime-local" id="chart-end" name="end">
                         </div>
-                        <div class="filter-group"id="taskDropdown">
-                            <label for="chart-task">Task</label>
-                            <select id="chart-task" name="task_alias">
-                                <option value="">Select a task</option>
-                            </select>
-                        </div>
-                        <div class="dropdown" id="deviceDropdown" style="display: none;">
-                            <button type="button" class="dropdown-toggle" id="dropdownToggle">
-                                Select devices <span class="device-count" id="deviceCount"></span>
-                            </button>
-                            <div class="dropdown-menu" id="dropdownMenu">
-                                <!-- 设备选项将通过JavaScript动态添加 -->
+                        <div class="filter-group">
+                            <label for="taskDropdown">Task</label>
+                            <div class="dropdown" id="taskDropdown">
+                                <button type="button" class="dropdown-toggle" id="taskDropdownToggle">
+                                    Select a task
+                                </button>
+                                <div class="dropdown-menu" id="taskDropdownMenu">
+                                    <!-- Task options will be loaded here -->
+                                </div>
                             </div>
-                        </div>                        
+                            <input type="hidden" id="chart-task" name="task_alias" value="">
+                        </div>
+                        <div class="filter-group">
+                            <label for="deviceDropdown">Device</label>
+                            <div class="dropdown" id="deviceDropdown" style="display: none;">
+                                <button type="button" class="dropdown-toggle" id="dropdownToggle">
+                                    Select devices <span class="device-count" id="deviceCount"></span>
+                                </button>
+                                <div class="dropdown-menu" id="dropdownMenu">
+                                    <!-- 设备选项将通过JavaScript动态添加 -->
+                                </div>
+                            </div>  
+                        </div>                      
                     </form>
                     
                     <div class="chart-container">

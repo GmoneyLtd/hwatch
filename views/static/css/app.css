@@ -327,10 +327,11 @@ body {
 .dropdown {
     position: relative;
     display: inline-block;
+    width: 60%;
 }
 
 .dropdown-toggle {
-    width: 60%;
+    width: 100%;
     text-align: left;
     position: relative;
     background-color: #007bff;
@@ -383,8 +384,6 @@ body {
     padding: 5px 8px;
     font-size: 12px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
 }
 
 .dropdown-item:hover {
@@ -392,6 +391,10 @@ body {
 }
 
 .dropdown-item input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+.dropdown-item input[type="radio"] {
     margin-right: 6px;
 }
 

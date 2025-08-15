@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const configForm = document.getElementById('config-form');
     const chartForm = document.getElementById('chart-form');
     const chartContainer = document.getElementById('data-chart');
+    const taskDropdownToggle = document.getElementById('taskDropdownToggle');
+    const taskDropdownMenu = document.getElementById('taskDropdownMenu');
     let configEditor;
     let dataChart;
 
@@ -82,11 +84,23 @@ document.addEventListener('DOMContentLoaded', function () {
     
     function setupChartEventListeners() {
         // 任务选择改变时触发数据加载
-        const taskSelect = document.getElementById('chart-task');
-        if (taskSelect) {
-            // 移除已有的事件监听器（防止重复绑定）
-            taskSelect.removeEventListener('change', taskSelectHandler);
-            taskSelect.addEventListener('change', taskSelectHandler);
+        if (taskDropdownToggle) {
+            taskDropdownToggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                taskDropdownMenu.style.display = taskDropdownMenu.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        if (taskDropdownMenu) {
+            taskDropdownMenu.addEventListener('click', (event) => {
+                if (event.target.name === 'task') {
+                    const selectedTask = event.target.value;
+                    document.getElementById('chart-task').value = selectedTask;
+                    taskDropdownToggle.textContent = selectedTask;
+                    taskDropdownMenu.style.display = 'none';
+                    loadChartData();
+                }
+            });
         }
     
         // 时间选择改变时触发数据加载
@@ -232,20 +246,33 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateChartFilterOptions(data) {
-        const taskSelect = document.getElementById('chart-task');
-        const selectedTask = taskSelect.value;
-        
+        const selectedTask = document.getElementById('chart-task').value;
+
         // 更新任务选项
-        taskSelect.innerHTML = '<option value="">Select a task</option>';
+        taskDropdownMenu.innerHTML = '';
         if (data.tasks && data.tasks.length > 0) {
             data.tasks.forEach(task => {
-                const option = document.createElement('option');
-                option.value = task;
-                option.textContent = task;
+                const div = document.createElement('div');
+                div.className = 'dropdown-item';
+                
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'task';
+                radio.value = task;
+                radio.id = `task-${task}`;
+                
                 if (task === selectedTask) {
-                    option.selected = true;
+                    radio.checked = true;
+                    taskDropdownToggle.textContent = task;
                 }
-                taskSelect.appendChild(option);
+                
+                const label = document.createElement('label');
+                label.htmlFor = `task-${task}`;
+                label.textContent = task;
+                
+                div.appendChild(radio);
+                div.appendChild(label);
+                taskDropdownMenu.appendChild(div);
             });
         }
 
@@ -429,7 +456,12 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', (event) => {
         const deviceDropdown = document.getElementById('deviceDropdown');
         if (deviceDropdown && !deviceDropdown.contains(event.target)) {
-            dropdownMenu.style.display = 'none';
+            document.getElementById('dropdownMenu').style.display = 'none';
+        }
+
+        const taskDropdown = document.getElementById('taskDropdown');
+        if (taskDropdown && !taskDropdown.contains(event.target)) {
+            taskDropdownMenu.style.display = 'none';
         }
     });
 
