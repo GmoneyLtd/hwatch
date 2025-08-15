@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initChartView() {
+        // 设置默认时间范围为最近2小时
+        setDefaultTimeRange();
+        
         if (!dataChart) {
             const ctx = chartContainer.getContext('2d');
             dataChart = new Chart(ctx, {
@@ -54,7 +57,78 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
+        
+        // 初始化时加载数据
         loadChartData();
+        
+        // 添加事件监听器
+        setupChartEventListeners();
+    }
+    
+    // 设置默认时间范围为最近2小时
+    function setDefaultTimeRange() {
+        const now = new Date();
+        const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+        
+        const startInput = document.getElementById('chart-start');
+        const endInput = document.getElementById('chart-end');
+        
+        // 格式化为datetime-local需要的格式: YYYY-MM-DDTHH:mm
+        if (startInput && endInput) {
+            startInput.value = twoHoursAgo.toISOString().slice(0, 16);
+            endInput.value = now.toISOString().slice(0, 16);
+        }
+    }
+    
+    function setupChartEventListeners() {
+        // 任务选择改变时触发数据加载
+        const taskSelect = document.getElementById('chart-task');
+        if (taskSelect) {
+            // 移除已有的事件监听器（防止重复绑定）
+            taskSelect.removeEventListener('change', taskSelectHandler);
+            taskSelect.addEventListener('change', taskSelectHandler);
+        }
+    
+        // 时间选择改变时触发数据加载
+        const timeInputs = document.querySelectorAll('#chart-start, #chart-end');
+        timeInputs.forEach(input => {
+            // 移除已有的事件监听器（防止重复绑定）
+            input.removeEventListener('change', timeInputChangeHandler);
+            input.addEventListener('change', timeInputChangeHandler);
+        });
+        
+        // 设备选择改变时触发数据加载
+        const deviceDropdown = document.getElementById('deviceDropdown');
+        if (deviceDropdown) {
+            // 移除已有的事件监听器（防止重复绑定）
+            deviceDropdown.removeEventListener('change', deviceChangeHandler);
+            deviceDropdown.addEventListener('change', deviceChangeHandler);
+        }
+    }
+    
+    // 定义事件处理函数，避免重复绑定
+    function taskSelectHandler() {
+        // 切换任务时清除设备选择状态
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        if (dropdownMenu) {
+            const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            updateDeviceCount();
+        }
+        loadChartData();
+    }
+    
+    function timeInputChangeHandler() {
+        loadChartData();
+    }
+    
+    function deviceChangeHandler(event) {
+        if (event.target.name === 'devices') {
+            updateDeviceCount();
+            loadChartData();
+        }
     }
 
     // --- Data Loading ---
@@ -84,8 +158,30 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadChartData() {
         const formData = new FormData(chartForm);
         const params = new URLSearchParams(formData);
+        
+        // 特殊处理devices参数，使用列表方式传递
+        const devices = [];
+        const deviceCheckboxes = document.querySelectorAll('input[name="devices"]:checked');
+        deviceCheckboxes.forEach(checkbox => {
+            devices.push(checkbox.value);
+        });
+        
+        // 构建查询参数
+        const urlParams = new URLSearchParams();
+        for (const [key, value] of params.entries()) {
+            // 跳过devices参数，我们单独处理
+            if (key !== 'devices') {
+                urlParams.append(key, value);
+            }
+        }
+        
+        // 添加devices参数（使用列表方式）
+        if (devices.length > 0) {
+            urlParams.append('devices', devices.join(','));
+        }
+        
         try {
-            const response = await fetch(`/api/chart?${params.toString()}`);
+            const response = await fetch(`/api/chart?${urlParams.toString()}`);
             const data = await response.json();
             updateChart(data);
             updateChartFilterOptions(data);
@@ -139,24 +235,44 @@ document.addEventListener('DOMContentLoaded', function () {
         const taskSelect = document.getElementById('chart-task');
         const selectedTask = taskSelect.value;
         
-        // Update task options
+        // 更新任务选项
         taskSelect.innerHTML = '<option value="">Select a task</option>';
-        data.tasks.forEach(task => {
-            const option = document.createElement('option');
-            option.value = task;
-            option.textContent = task;
-            if (task === selectedTask) {
-                option.selected = true;
-            }
-            taskSelect.appendChild(option);
-        });
+        if (data.tasks && data.tasks.length > 0) {
+            data.tasks.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task;
+                option.textContent = task;
+                if (task === selectedTask) {
+                    option.selected = true;
+                }
+                taskSelect.appendChild(option);
+            });
+        }
 
-        // Update device options
-        const deviceList = document.getElementById('device-list');
-        deviceList.innerHTML = '';
-        if (data.available_devices) {
+        // 更新设备选项
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const deviceDropdown = document.getElementById('deviceDropdown');
+        const deviceCountSpan = document.getElementById('deviceCount');
+        
+        // 始终显示设备下拉菜单（根据是否有可用设备决定内容）
+        deviceDropdown.style.display = 'block';
+        if (data.available_devices && data.available_devices.length > 0) {
+            // 保存当前选中的设备
+            const currentlyCheckedDevices = new Set();
+            if (dropdownMenu) {
+                const currentCheckboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
+                currentCheckboxes.forEach(cb => {
+                    if (cb.checked) {
+                        currentlyCheckedDevices.add(cb.value);
+                    }
+                });
+            }
+            
+            dropdownMenu.innerHTML = '';
+            
             data.available_devices.forEach(device => {
                 const div = document.createElement('div');
+                div.className = 'dropdown-item';
                 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
@@ -164,42 +280,64 @@ document.addEventListener('DOMContentLoaded', function () {
                 checkbox.value = device;
                 checkbox.id = `device-${device}`;
                 
-                // Preserve selected state
-                const previouslySelected = chartForm.querySelector(`input[type="checkbox"][value="${device}"]:checked`);
-                if (previouslySelected) {
+                // 保持选中状态 - 检查之前选中的设备或新数据中的选中设备
+                if (data.selected_devices && data.selected_devices.includes(device)) {
+                    checkbox.checked = true;
+                } else if (currentlyCheckedDevices.has(device)) {
                     checkbox.checked = true;
                 }
                 
                 const label = document.createElement('label');
                 label.htmlFor = `device-${device}`;
-                label.textContent = ` ${device}`;
+                label.textContent = device;
                 
                 div.appendChild(checkbox);
                 div.appendChild(label);
-                deviceList.appendChild(div);
+                dropdownMenu.appendChild(div);
 
-                // Add event listeners
-                checkbox.addEventListener('change', () => {
-                    updateDeviceCount();
-                    loadChartData(); // Load chart data when selection changes
-                });
+                // 添加事件监听器（使用命名函数避免重复绑定）
+                checkbox.removeEventListener('change', deviceCheckboxChangeHandler);
+                checkbox.addEventListener('change', deviceCheckboxChangeHandler);
                 
-                // Prevent dropdown from closing when clicking on checkbox or label
-                checkbox.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
+                // 防止下拉菜单在点击复选框或标签时关闭
+                checkbox.removeEventListener('click', preventDropdownCloseHandler);
+                checkbox.addEventListener('click', preventDropdownCloseHandler);
                 
-                label.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
+                label.removeEventListener('click', preventDropdownCloseHandler);
+                label.addEventListener('click', preventDropdownCloseHandler);
             });
+            
+            // 更新设备计数
+            updateDeviceCount();
+        } else {
+            // 没有可用设备时显示提示信息
+            dropdownMenu.innerHTML = '<div class="dropdown-item">No devices available</div>';
+            if (deviceCountSpan) {
+                deviceCountSpan.textContent = '(0/0)';
+            }
         }
+    }
+    
+    // 定义事件处理函数，避免重复绑定
+    function deviceCheckboxChangeHandler(event) {
+        updateDeviceCount();
+        loadChartData(); // 设备选择改变时加载图表数据
+    }
+    
+    function preventDropdownCloseHandler(event) {
+        event.stopPropagation();
+    }
 
-        function updateDeviceCount() {
-            const checkedCount = chartForm.querySelectorAll('input[type="checkbox"][name="devices"]:checked').length;
-            deviceCountSpan.textContent = checkedCount;
+    function updateDeviceCount() {
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        if (!dropdownMenu) return;
+        
+        const checkedCount = dropdownMenu.querySelectorAll('input[type="checkbox"]:checked').length;
+        const totalCount = dropdownMenu.querySelectorAll('input[type="checkbox"]').length;
+        const deviceCountSpan = document.getElementById('deviceCount');
+        if (deviceCountSpan) {
+            deviceCountSpan.textContent = `(${checkedCount}/${totalCount})`;
         }
-        updateDeviceCount(); // Initial count update
     }
 
 
@@ -275,43 +413,26 @@ document.addEventListener('DOMContentLoaded', function () {
     navButtons.forEach(button => button.addEventListener('click', handleNavClick));
     tasksTableBody.addEventListener('click', handleTaskAction);
     configForm.addEventListener('submit', handleConfigSave);
-    chartForm.addEventListener('change', handleChartFormChange);
 
-    // Device dropdown in chart view
+    // 设备下拉菜单功能
     const dropdownToggle = document.getElementById('dropdownToggle');
     const dropdownMenu = document.getElementById('dropdownMenu');
-    const deviceCountSpan = document.getElementById('deviceCount');
 
-    function updateDeviceCount() {
-        const checkedCount = chartForm.querySelectorAll('input[type="checkbox"][name="devices"]:checked').length;
-        deviceCountSpan.textContent = checkedCount;
-    }
-
-    if(dropdownToggle) {
+    if (dropdownToggle) {
         dropdownToggle.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent document click from closing immediately
+            event.stopPropagation();
             dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
         });
     }
 
-    // Close dropdown when clicking outside and trigger data load
+    // 点击外部关闭下拉菜单
     document.addEventListener('click', (event) => {
-        const deviceSelector = document.querySelector('.device-selector');
-        if (deviceSelector && !deviceSelector.contains(event.target)) {
+        const deviceDropdown = document.getElementById('deviceDropdown');
+        if (deviceDropdown && !deviceDropdown.contains(event.target)) {
             dropdownMenu.style.display = 'none';
-            loadChartData(); // Trigger data load on close
         }
     });
 
-    // Add change listener to form
-    chartForm.addEventListener('change', (event) => {
-        if (event.target.name === 'devices') {
-            // Device selection changed, update chart
-            loadChartData();
-        }
-    });
-
-    // Initial view
+    // 初始视图
     switchView('dashboard-view');
-    updateDeviceCount(); // Initial count update
 });

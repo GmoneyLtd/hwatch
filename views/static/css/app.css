@@ -306,95 +306,6 @@ body {
     min-width: 0;
 }
 
-/* 仅为select元素添加自定义下拉箭头 */
-.filter-group select {
-    /* 移除默认的appearance以更好地控制样式 */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    /* 添加右侧padding给自定义箭头留出空间 */
-    padding-right: 30px;
-    /* 添加自定义下拉箭头 */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-    background-size: 16px;
-}
-
-/* Dropdown */
-.dropdown {
-    position: relative;
-    display: inline-block;
-    width: 100%; /* Ensure it takes full width of its parent */
-}
-
-.dropdown-toggle {
-    width: 100%;
-    text-align: left;
-    position: relative;
-    background-color: white;
-    color: #495057;
-    padding: 6px 12px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* To push arrow to the right */
-    gap: 6px;
-    height: 30px;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-}
-
-.dropdown-toggle:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.dropdown-toggle:after {
-    content: "▼";
-    font-size: 7px;
-    color: #6c757d;
-}
-
-.dropdown-menu {
-    position: absolute; /* Keep positioning */
-}
-
-.dropdown-menu.show {
-    display: block;
-}
-
-.dropdown-item {
-    padding: 5px 8px;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    color: #333;
-}
-
-.dropdown-item:hover {
-    background-color: #f8f9fa;
-}
-
-.dropdown-item input[type="checkbox"] {
-    display: none; /* Hide default checkbox */
-}
-
-.dropdown-item label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    width: 100%; /* Make label fill the item */
-}
-
-.dropdown-item label i {
-    margin-right: 8px;
-    font-size: 1.2em;
-}
-
 /* Chart container */
 .chart-container {
     position: relative;
@@ -410,6 +321,83 @@ body {
     border: 1px solid #f5c6cb;
     border-radius: 6px;
     margin-bottom: 20px;
+}
+
+/* Chart Devices下拉菜单和复选框样式 */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-toggle {
+    width: 100%;
+    text-align: left;
+    position: relative;
+    background-color: #007bff;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+}
+
+.dropdown-toggle:hover {
+    background-color: #0056b3;
+}
+
+.dropdown-toggle:after {
+    content: "▼";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 7px;
+    color: #6c757d;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    border: 2px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 5px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+.device-count {
+    font-size: 0.8em;
+    opacity: 0.8;
 }
 
 /* Responsive design */
