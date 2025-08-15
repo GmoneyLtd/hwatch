@@ -97,7 +97,7 @@
                             <input type="hidden" id="chart-task" name="task_alias" value="">
                         </div>
                         <div class="filter-group">
-                            <label for="deviceDropdown">Device</label>
+                            <label for="deviceDropdown">Devices</label>
                             <div class="dropdown" id="deviceDropdown" style="display: none;">
                                 <button type="button" class="dropdown-toggle" id="dropdownToggle">
                                     Select devices <span class="device-count" id="deviceCount"></span>
@@ -105,8 +105,8 @@
                                 <div class="dropdown-menu" id="dropdownMenu">
                                     <!-- 设备选项将通过JavaScript动态添加 -->
                                 </div>
-                            </div>  
-                        </div>                      
+                            </div>
+                        </div>
                     </form>
                     
                     <div class="chart-container">

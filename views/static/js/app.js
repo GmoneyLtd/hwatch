@@ -98,6 +98,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('chart-task').value = selectedTask;
                     taskDropdownToggle.textContent = selectedTask;
                     taskDropdownMenu.style.display = 'none';
+
+                    // Clear device selection
+                    const dropdownMenu = document.getElementById('dropdownMenu');
+                    if (dropdownMenu) {
+                        const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
+                        checkboxes.forEach(cb => {
+                            cb.checked = false;
+                        });
+                        updateDeviceCount();
+                    }
+
                     loadChartData();
                 }
             });
@@ -120,19 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // 定义事件处理函数，避免重复绑定
-    function taskSelectHandler() {
-        // 切换任务时清除设备选择状态
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        if (dropdownMenu) {
-            const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            updateDeviceCount();
-        }
-        loadChartData();
-    }
+    
     
     function timeInputChangeHandler() {
         loadChartData();
