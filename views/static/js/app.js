@@ -410,9 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function handleChartFormChange() {
-        loadChartData();
-    }
+    
     
     // --- View Switching ---
 
