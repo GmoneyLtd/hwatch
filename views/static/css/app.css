@@ -330,7 +330,7 @@ body {
 }
 
 .dropdown-toggle {
-    width: 100%;
+    width: 60%;
     text-align: left;
     position: relative;
     background-color: #007bff;
