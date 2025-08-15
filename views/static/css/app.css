@@ -221,7 +221,7 @@ body {
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 10px;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -409,33 +409,7 @@ body {
     background-color: var(--color-secondary);
 }
 
-.filter-group {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-}
 
-.filter-group label {
-    font-weight: 600;
-    margin-right: 8px;
-    margin-bottom: 0;
-    color: #495057;
-    white-space: nowrap;
-    font-size: 14px;
-    flex-shrink: 0;
-    width: auto;
-}
-
-.filter-group input,
-.filter-group select {
-    padding: 6px 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
-    flex: 1;
-    min-width: 0;
-}
 
 /* Chart container */
 .chart-container {
@@ -532,6 +506,72 @@ body {
 .device-count {
     font-size: 0.8em;
     opacity: 0.8;
+}
+
+.file-list {
+    list-style: none;
+    padding: 0;
+    border: 1px solid var(--color-light-gray);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.file-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px; /* Increased padding for more height */
+    border-bottom: 1px solid var(--color-light-gray);
+    transition: background-color 0.2s ease;
+}
+
+.file-list li:last-child {
+    border-bottom: none;
+}
+
+.file-list li:hover {
+    background-color: var(--color-secondary); /* Light background on hover */
+}
+
+.file-list li .file-info {
+    flex-basis: 0;
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: auto 3fr 1fr 1fr; /* Icon, Name, Size, Created At */
+    align-items: center;
+    gap: 10px; /* Space between columns */
+}
+
+.file-list li .file-info i {
+    margin-right: 0; /* Handled by grid gap */
+    color: var(--color-medium-gray);
+}
+
+.file-list li .file-name {
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-list li .file-size {
+    font-size: 0.85em;
+    color: var(--color-medium-gray);
+    justify-self: left; /* Center content horizontally */
+}
+
+.file-list li .file-created-at {
+    font-size: 0.85em;
+    color: var(--color-medium-gray);
+    justify-self: left; /* Center content horizontally */
+}
+
+.file-list li .file-actions {
+    flex-shrink: 0; /* Prevent actions from shrinking */
+    margin-left: 15px;
 }
 
 /* Responsive design */

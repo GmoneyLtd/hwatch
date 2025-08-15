@@ -66,6 +66,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // 添加事件监听器
         setupChartEventListeners();
     }
+
+    function initOutfileView() {
+        loadOutfileList();
+    }
     
     // 设置默认时间范围为最近2小时
     function setDefaultTimeRange() {
@@ -224,6 +228,21 @@ document.addEventListener('DOMContentLoaded', function () {
             displayErrorMessage('Failed to load chart data. Please try again.');
         }
     }
+
+    async function loadOutfileList() {
+        hideErrorMessage();
+        console.log('Requesting outfile list from /api/outfile/list');
+        try {
+            const response = await fetch('/api/outfile/list');
+            console.log('Response from /api/outfile/list:', response);
+            const files = await response.json();
+            console.log('Parsed outfile list:', files);
+            renderOutfileList(files);
+        } catch (error) {
+            console.error('Error loading outfile list:', error);
+            displayErrorMessage('Failed to load outfile list. Please try again.');
+        }
+    }
     
     // --- UI Rendering and Updates ---
 
@@ -256,6 +275,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 </td>
             `;
             tasksTableBody.appendChild(row);
+        });
+    }
+
+    function renderOutfileList(files) {
+        const outfileListDiv = document.getElementById('outfile-list');
+        outfileListDiv.innerHTML = ''; // Clear previous list
+
+        if (!files || files.length === 0) {
+            outfileListDiv.innerHTML = '<p>No files found in outfile directory.</p>';
+            return;
+        }
+
+        const ul = document.createElement('ul');
+        ul.className = 'file-list'; // Add a class for styling
+
+        files.forEach(file => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="file-info">
+                    <i class="fas fa-file"></i>
+                    <span class="file-name" title="${file.name}">${file.name}</span>
+                    <span class="file-size">${file.size}</span>
+                    <span class="file-created-at">${file.created_at}</span>
+                </div>
+                <div class="file-actions">
+                    <a href="/api/outfile/download/${file.name}" download="${file.name}" class="btn btn-success">Download</a>
+                </div>
+            `;
+            ul.appendChild(li);
+        });
+        outfileListDiv.appendChild(ul);
+
+        // Add event listener for download buttons (delegated)
+        outfileListDiv.addEventListener('click', (event) => {
+            if (event.target.classList.contains('btn-primary')) {
+                console.log('Download button clicked for:', event.target.download);
+            }
         });
     }
 
@@ -399,6 +455,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'dashboard-view': initDashboardView,
         'config-view': initConfigView,
         'chart-view': initChartView,
+        'outfile-view': initOutfileView,
     };
 
     function switchView(viewId) {

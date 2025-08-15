@@ -28,6 +28,10 @@
                     <i class="fas fa-chart-line"></i>
                     <span>Chart</span>
                 </button>
+                <button class="nav-btn" data-view="outfile">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Outfile</span>
+                </button>
             </nav>
         </header>
 
@@ -66,7 +70,7 @@
                             <div id="config-editor" class="config-editor"></div>
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-success">
                                 <i class="fas fa-save"></i> Save
                             </button>
                         </div>
@@ -113,6 +117,16 @@
                     
                     <div class="chart-container">
                         <canvas id="data-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Outfile View -->
+            <section id="outfile-view" class="view">
+                <div class="view-content">
+                    <h2>Outfile Files</h2>
+                    <div id="outfile-list">
+                        <!-- File list will be loaded here -->
                     </div>
                 </div>
             </section>
