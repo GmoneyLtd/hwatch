@@ -154,9 +154,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadDashboardData() {
         hideErrorMessage();
+        console.log('Requesting dashboard data from /api/tasks');
         try {
             const response = await fetch('/api/tasks');
+            console.log('Response from /api/tasks:', response);
             const tasks = await response.json();
+            console.log('Parsed dashboard data:', tasks);
             renderTasksTable(tasks);
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -166,9 +169,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadConfigData() {
         hideErrorMessage();
+        console.log('Requesting config data from /api/config');
         try {
             const response = await fetch('/api/config');
+            console.log('Response from /api/config:', response);
             const config = await response.text();
+            console.log('Parsed config data:', config);
             if (configEditor) {
                 configEditor.setValue(config, -1);
             }
@@ -178,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    async function loadChartData() {
+        async function loadChartData() {
         hideErrorMessage();
         const formData = new FormData(chartForm);
         const params = new URLSearchParams(formData);
@@ -204,9 +210,13 @@ document.addEventListener('DOMContentLoaded', function () {
             urlParams.append('devices', devices.join(','));
         }
         
+        const requestUrl = `/api/chart?${urlParams.toString()}`;
+        console.log('Requesting chart data from:', requestUrl);
         try {
-            const response = await fetch(`/api/chart?${urlParams.toString()}`);
+            const response = await fetch(requestUrl);
+            console.log('Response from chart API:', response);
             const data = await response.json();
+            console.log('Parsed chart data:', data);
             updateChart(data);
             updateChartFilterOptions(data);
         } catch (error) {
@@ -259,33 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateChartFilterOptions(data) {
         const selectedTask = document.getElementById('chart-task').value;
 
-        // 更新任务选项
-        taskDropdownMenu.innerHTML = '';
-        if (data.tasks && data.tasks.length > 0) {
-            data.tasks.forEach(task => {
-                const div = document.createElement('div');
-                div.className = 'dropdown-item';
-                
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = 'task';
-                radio.value = task;
-                radio.id = `task-${task}`;
-                
-                if (task === selectedTask) {
-                    radio.checked = true;
-                    taskDropdownToggle.textContent = task;
-                }
-                
-                const label = document.createElement('label');
-                label.htmlFor = `task-${task}`;
-                label.textContent = task;
-                
-                div.appendChild(radio);
-                div.appendChild(label);
-                taskDropdownMenu.appendChild(div);
-            });
-        }
+        
 
         // 更新任务选项
         taskDropdownMenu.innerHTML = '';
@@ -368,8 +352,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const alias = button.dataset.alias;
             const action = button.dataset.action;
             
+            const requestUrl = `/api/tasks/${action}/${device}/${alias}`;
+            console.log(`Sending ${action} request to: ${requestUrl}`);
             try {
-                await fetch(`/api/tasks/${action}/${device}/${alias}`, { method: 'POST' });
+                const response = await fetch(requestUrl, { method: 'POST' });
+                console.log(`Response for ${action} task:`, response);
                 loadDashboardData();
             } catch (error) {
                 console.error(`Error ${action}ing task:`, error);
@@ -382,16 +369,20 @@ document.addEventListener('DOMContentLoaded', function () {
         event.preventDefault();
         hideErrorMessage('config-error');
         const content = configEditor.getValue();
+        
+        console.log('Saving config to /api/config with content:', content);
         try {
             const response = await fetch('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/yaml' },
                 body: content
             });
+            console.log('Response from config save:', response);
             if (response.ok) {
                 displayErrorMessage('Config saved successfully!', 'config-error');
             } else {
                 const error = await response.json();
+                console.error('Error response from config save:', error);
                 displayErrorMessage(`Error saving config: ${error.message}`, 'config-error');
             }
         } catch (error) {
