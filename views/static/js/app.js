@@ -154,51 +154,52 @@ document.addEventListener('DOMContentLoaded', function () {
         // Update device options
         const deviceList = document.getElementById('device-list');
         deviceList.innerHTML = '';
-        let selectedCount = 0;
         if (data.available_devices) {
             data.available_devices.forEach(device => {
+                const div = document.createElement('div');
+                
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.name = 'devices';
                 checkbox.value = device;
                 checkbox.id = `device-${device}`;
+                
                 // Preserve selected state
                 const previouslySelected = chartForm.querySelector(`input[type="checkbox"][value="${device}"]:checked`);
                 if (previouslySelected) {
                     checkbox.checked = true;
-                    selectedCount++;
                 }
                 
                 const label = document.createElement('label');
-                label.appendChild(checkbox); // Append checkbox to label
-                label.appendChild(document.createTextNode(` ${device}`)); // Append text node to label
-
-                const div = document.createElement('div');
-                div.appendChild(label); // Append the label (which contains checkbox and text) to div
+                label.htmlFor = `device-${device}`;
+                label.textContent = ` ${device}`;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
                 deviceList.appendChild(div);
 
+                // Add event listeners
                 checkbox.addEventListener('change', () => {
                     updateDeviceCount();
+                    loadChartData(); // Load chart data when selection changes
+                });
+                
+                // Prevent dropdown from closing when clicking on checkbox or label
+                checkbox.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                
+                label.addEventListener('click', (e) => {
+                    e.stopPropagation();
                 });
             });
         }
 
-        const deviceCountSpan = document.getElementById('deviceCount');
         function updateDeviceCount() {
-            selectedCount = chartForm.querySelectorAll('input[type="checkbox"][name="devices"]:checked').length;
-            deviceCountSpan.textContent = selectedCount;
+            const checkedCount = chartForm.querySelectorAll('input[type="checkbox"][name="devices"]:checked').length;
+            deviceCountSpan.textContent = checkedCount;
         }
         updateDeviceCount(); // Initial count update
-
-        // Close dropdown when clicking outside
-        // Close dropdown when clicking outside and trigger data load
-        document.addEventListener('click', (event) => {
-            const dropdown = document.querySelector('.device-selector'); // Assuming .device-selector is the main container
-            if (dropdown && !dropdown.contains(event.target)) {
-                dropdownMenu.style.display = 'none';
-                loadChartData(); // Trigger data load on close
-            }
-        });
     }
 
 
@@ -302,10 +303,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Add change listener to checkboxes
+    // Add change listener to form
     chartForm.addEventListener('change', (event) => {
         if (event.target.name === 'devices') {
-            updateDeviceCount();
+            // Device selection changed, update chart
+            loadChartData();
         }
     });
 
