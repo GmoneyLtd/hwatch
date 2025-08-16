@@ -202,6 +202,30 @@ tasks:
 
 ---
 
+### 5. 日志系统设计
+
+项目的日志系统基于 `loguru` 构建，旨在提供一个全局统一、可配置的日志解决方案。
+
+- **统一配置入口**: 在 `core/ulog.py` 模块中，会提供一个 `setup_logging()` 函数，用于初始化整个应用的日志系统。`app.py` 在启动时会调用此函数。
+- **命令行控制级别**: 应用支持通过命令行参数动态设置日志级别。例如：
+  ```bash
+  # 以 DEBUG 级别启动，输出更详细的日志
+  python app.py --level DEBUG
+  
+  # 以 WARNING 级别启动，仅输出警告和错误信息
+  python app.py --level WARNING
+  ```
+- **多目标输出 (Sinks)**:
+    - **控制台**: 用于在运行时实时观察应用状态，输出格式将包含时间、级别、模块名和颜色，便于快速定位问题。
+    - **文件**: 所有日志（`DEBUG`及以上）都会被写入 `log/` 目录下的文件中，并按模块进行分离，方便针对性地排查问题。主要日志文件包括：
+        - `app.log`: 主应用日志。
+        - `collector.log`: 数据采集相关日志。
+        - `scheduler.log`: 任务调度相关日志。
+        - `web_server.log`: Web服务相关日志。
+- **日志自动管理**: 文件日志会自动进行 **轮转 (Rotation)** 和 **保留 (Retention)**。例如，当日志文件达到10MB时会自动创建新文件，并且默认仅保留最近7天的日志，以防止日志文件无限增长，耗尽磁盘空间。
+
+---
+
 ## 📁 项目结构
 
 ```
@@ -215,9 +239,10 @@ hwatch/
 │   ├── collector.py        # 异步数据采集模块 (SSH/SNMP)
 │   ├── database.py         # 异步数据库操作模块
 │   ├── scheduler.py        # 异步任务调度器
-│   └── web_server.py       # 异步Web服务
-│   └── config_loader.py    # 配置加载与解析模块
-│   └── watch.py            # 配置监控模块
+│   ├── web_server.py       # 异步Web服务
+│   ├── config_loader.py    # 配置加载与解析模块
+│   ├── watch.py            # 配置监控模块
+│   └── ulog.py             # 全局日志配置模块
 ├── views/                  # Web视图目录
 │   ├── static/             # 静态资源文件（CSS, JS）
 │   └── templates/          # HTML 模板文件
