@@ -14,7 +14,7 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1><i class="fas fa-tachometer-alt"></i> awatch - Dashboard</h1>
+            <h1><i class="fas fa-tachometer-alt"></i> Hwatch - Dashboard</h1>
             <nav class="app-nav">
                 <button class="nav-btn active" data-view="dashboard">
                     <i class="fas fa-home"></i>
