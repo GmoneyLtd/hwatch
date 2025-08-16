@@ -1,0 +1,61 @@
+show datapath session counters 
+
+Thu Jun 05 16:02:26.207 2025
+
++----+-------+-----------------------------------------------------+
+|SUM/|       |                                   |                 |
+|CPU |  Addr | Description                                   Value |
++----+-------+-----------------------------------------------------+
+|    | [002] | No Session Entry for NAT                        204 |
+|    | [003] | No FW Session Entry for SP ALG                   10 |
++----+-------+-----------------------------------------------------+
+|    |       |                                                     |
+| G  | [000] | Current Entries                              454570 |
+| G  | [001] | High Water Mark                              566237 |
+| G  | [002] | Maximum Entries                             2097152 |
+| G  | [005] | Total Entries                             791704886 |
+| G  | [007] | Duplicate Entries                             48448 |
+| G  | [009] | Current Max link length                           6 |
+| G  | [010] | Max link length                                  10 |
+| G  | [011] | Collision list with link len 0               217330 |
+| G  | [012] | Collision list with link len 1                94675 |
+| G  | [013] | Collision list with link len 2               114892 |
+| G  | [014] | Collision list with link len 3                13736 |
+| G  | [015] | Collision list with link len 4                 1497 |
+| G  | [016] | Collision list with link len 5                  135 |
+| G  | [017] | Collision list with link len 6                   11 |
+| G  | [032] | Entries used in link len calc                442276 |
+| G  | [033] | Stale Entries                              42522064 |
+| G  | [034] | Aged Entries                              756861120 |
++----+-------+-----------------------------------------------------+
+
+
+show datapath network ingress 
+
++-------+-----+-----------------------------------+-----------+----------+---------+----------+--------+
+|       |     |                                   |           |          |         |          |        |
+| NAE   |LIFO | Description                       |Packets    |Threshold |Empty    |Threshold |Empty   |
+| Block |Queue|                                   |Received   |count     |Count    |Recovery  |Recovery|
+|       |     |                                   |           |          |         |          |        |
++-------+-----+-----------------------------------+-----------+----------+---------+----------+--------+
+|      0|    0|          Not used                 |          0|         0|        0|         0|       0|
+|      0|    1|          Default queue            | 1945929924|   1371442|  1260011|   1371442| 1260011|
+|      0|    2|          Not used                 |          0|         0|        0|         0|       0|
+|      0|    3|          GRE (HB)                 | 1515336973|         0|        0|         0|       0|
+|      0|    4|          Not used                 |          0|         0|        0|         0|       0|
+|      0|    5|          IP Fragments             | 1301884690|        11|        3|        11|       3|
+|      0|    6|          PVST                     |          0|         0|        0|         0|       0|
+|      0|    7|          xSTP, VRRP, LACP         |  150090246|         0|        0|         0|       0|
+|      0|    8|          Cluster Heartbeat        |   90134558|         0|        0|         0|       0|
+|      0|    9|          PAPI, CFGM               | 1266403860|        28|        3|        28|       3|
+|      0|   10|          SIP, PPTP, L2TP, IKE     |        913|         0|        0|         0|       0|
+|      0|   11|          ARP, HTTP(CAP), DHCP, DNS|  814841065|         2|        0|         2|       0|
+|      0|   12|          Not used                 |          0|         0|        0|         0|       0|
+|      0|   13|          SNMP                     |   30215049|         0|        0|         0|       0|
+|      0|   14|          TFTP,FTP,SSH,TELNET,HTTP |   39496904|         1|        0|         1|       0|
+|      0|   15|          SYSLOG                   |     697503|         0|        0|         0|       0|
+|      0|   16|          Not used                 |          0|         0|        0|         0|       0|
+|      0|   17|          Not used                 |          0|         0|        0|         0|       0|
+|      0|   18|          Internal NAE traffic     |          0|         0|        0|         0|       0|
+|      0|   19|          Not used                 |          0|         0|        0|         0|       0|
++-------+-----+-----------------------------------+-----------+----------+---------+----------+--------+

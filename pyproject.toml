@@ -5,7 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13.6"
 dependencies = [
+    "aiosqlite>=0.21.0",
+    "apscheduler>=3.11.0",
+    "asyncssh>=2.21.0",
     "fastapi>=0.116.1",
     "jinja2>=3.1.6",
+    "loguru>=0.7.3",
+    "pysnmp>=7.1.21",
+    "pyyaml>=6.0.2",
     "uvicorn[standard]>=0.35.0",
+    "watchdog>=6.0.0",
 ]
