@@ -34,26 +34,45 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
             del _ssh_connection_pools[pool_key]
             logger.debug(f"[SSH] 清理已断开连接: {task.alias} on {device.name}")
     
-    # 创建新连接
+    # 创建新连接（带重试机制）
     logger.info(f"[SSH] 建立新连接: {task.alias} on {device.name}")
-    conn = await asyncssh.connect(
-        device.ip,
-        port=conn_details.port,
-        username=conn_details.username,
-        password=conn_details.password,
-        known_hosts=None,  # 在生产中应考虑更安全的主机密钥验证
-        connect_timeout=conn_details.timeout
-    )
     
-    # 将连接添加到连接池
-    _ssh_connection_pools[pool_key] = {
-        'connection': conn,
-        'last_used': time.time(),
-        'task': task.alias,
-        'device': device.name
-    }
+    last_exception = None
+    for attempt in range(conn_details.retry + 1):  # retry+1 次尝试（1次初始尝试 + retry次重试）
+        try:
+            conn = await asyncssh.connect(
+                device.ip,
+                port=conn_details.port,
+                username=conn_details.username,
+                password=conn_details.password,
+                known_hosts=None,  # 在生产中应考虑更安全的主机密钥验证
+                connect_timeout=conn_details.timeout
+            )
+            
+            # 将连接添加到连接池
+            _ssh_connection_pools[pool_key] = {
+                'connection': conn,
+                'last_used': time.time(),
+                'task': task.alias,
+                'device': device.name
+            }
+            
+            if attempt > 0:
+                logger.info(f"[SSH] 连接 {task.alias} on {device.name} 在第 {attempt + 1} 次尝试后成功建立")
+            
+            return conn
+            
+        except Exception as e:
+            last_exception = e
+            if attempt < conn_details.retry:
+                wait_time = 2 ** attempt  # 指数退避
+                logger.warning(f"[SSH] 连接 {task.alias} on {device.name} 第 {attempt + 1} 次尝试失败: {e}. 等待 {wait_time} 秒后重试...")
+                await asyncio.sleep(wait_time)
+            else:
+                logger.error(f"[SSH] 连接 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然失败")
     
-    return conn
+    # 如果所有尝试都失败了，抛出最后一个异常
+    raise last_exception
 
 async def _cleanup_ssh_connections():
     """清理超时的SSH连接（超过10分钟未使用）"""
@@ -84,10 +103,38 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
         # 获取SSH连接（从连接池或新建）
         conn = await _get_ssh_connection(task, device)
         
-        # 执行命令
-        result = await conn.run(task.command, check=True)
-        logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name}")
-        return result.stdout
+        # 执行命令（带重试机制）
+        last_exception = None
+        for attempt in range(conn_details.retry + 1):
+            try:
+                result = await asyncio.wait_for(
+                    conn.run(task.command, check=True),
+                    timeout=conn_details.timeout
+                )
+                if attempt > 0:
+                    logger.info(f"[SSH] 命令 {task.alias} on {device.name} 在第 {attempt + 1} 次尝试后成功执行")
+                logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name}")
+                return result.stdout
+            except asyncio.TimeoutError:
+                last_exception = Exception(f"命令执行超时 ({conn_details.timeout} 秒)")
+                if attempt < conn_details.retry:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"[SSH] 命令 {task.alias} on {device.name} 第 {attempt + 1} 次执行超时. 等待 {wait_time} 秒后重试...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"[SSH] 命令 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然超时")
+            except Exception as e:
+                last_exception = e
+                if attempt < conn_details.retry:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"[SSH] 命令 {task.alias} on {device.name} 第 {attempt + 1} 次执行失败: {e}. 等待 {wait_time} 秒后重试...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"[SSH] 命令 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然失败: {e}")
+        
+        # 如果所有尝试都失败了，抛出最后一个异常
+        raise last_exception
+        
     except Exception as e:
         logger.error(f"[SSH] 任务 {task.alias} on {device.name} 执行失败: {e}")
         # 从连接池中移除失效连接
