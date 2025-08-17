@@ -8,6 +8,7 @@ from loguru import logger
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import yaml
+import time
 
 # 导入项目模块
 from core.config_loader import AppConfig, load_config
@@ -16,6 +17,17 @@ from core.database import get_chart_data
 # --- 全局变量与应用实例 ---
 
 app = FastAPI(title="Hwatch")
+
+# 添加访问日志中间件
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    logger.info(f"{request.client.host} - \"{request.method} {request.url.path}\" {response.status_code} {process_time:.2f}s")
+    
+    return response
 
 # 挂载静态文件目录
 static_path = os.path.join(os.path.dirname(__file__), '../views/static')
@@ -52,14 +64,18 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def handle_login(request: Request, username: str = Form(...), password: str = Form(...)):
+    logger.info(f"用户尝试登录: {username} (IP: {request.client.host})")
+    
     user = FAKE_USERS_DB.get(username)
     if not user or user["password"] != password:
+        logger.warning(f"用户登录失败: {username} (IP: {request.client.host}) - 用户名或密码错误")
         return templates.TemplateResponse(
             "login.tpl",
             {"request": request, "error": "Invalid username or password"},
             status_code=status.HTTP_401_UNAUTHORIZED
         )
     
+    logger.info(f"用户登录成功: {username} (IP: {request.client.host})")
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     # 在实际应用中，应使用安全的会话管理
     response.set_cookie(key="session_token", value=username, httponly=True)
@@ -67,6 +83,10 @@ async def handle_login(request: Request, username: str = Form(...), password: st
 
 @app.get("/logout")
 async def logout(request: Request):
+    user = await get_current_user(request)
+    username = "Unknown" if not user else user.get("username", "Unknown")
+    logger.info(f"用户登出: {username} (IP: {request.client.host})")
+    
     response = RedirectResponse(url="/login")
     response.delete_cookie("session_token")
     return response
@@ -126,6 +146,10 @@ async def get_config(user: dict = Depends(get_current_user)):
 @app.post("/api/config")
 async def save_config(request: Request, user: dict = Depends(get_current_user)):
     if not user: raise HTTPException(status_code=401)
+    
+    username = user.get("username", "Unknown")
+    logger.info(f"用户 {username} 开始更新配置文件")
+    
     content = await request.body()
     content = content.decode('utf-8')
     config_path = app_state.get("config_path")
@@ -133,17 +157,19 @@ async def save_config(request: Request, user: dict = Depends(get_current_user)):
     # 验证YAML格式
     try:
         yaml.safe_load(content)
+        logger.debug("配置文件 YAML 格式验证通过")
     except yaml.YAMLError as e:
+        logger.error(f"用户 {username} 提供的配置文件 YAML 格式错误: {e}")
         raise HTTPException(status_code=400, detail=f"YAML格式错误: {e}")
 
     try:
         with open(config_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        logger.info(f"配置文件 {config_path} 已被用户 {user} 在线更新。")
+        logger.info(f"配置文件 {config_path} 已被用户 {username} 在线更新。")
         # 文件保存后，watchdog会自动触发重载逻辑
         return {"message": "配置保存成功！"}
     except Exception as e:
-        logger.error(f"写入配置文件失败: {e}")
+        logger.error(f"用户 {username} 更新配置文件失败: {e}")
         raise HTTPException(status_code=500, detail="无法写入配置文件")
 
 @app.get("/api/chart_data")
@@ -181,18 +207,24 @@ async def list_outfiles(user: dict = Depends(get_current_user)):
 async def download_outfile(filename: str, user: dict = Depends(get_current_user)):
     if not user: raise HTTPException(status_code=401)
     
+    username = user.get("username", "Unknown")
+    
     # 防止路径遍历攻击
     if ".." in filename or filename.startswith("/"):
+        logger.warning(f"用户 {username} 尝试下载非法文件路径: {filename}")
         raise HTTPException(status_code=400, detail="无效的文件名")
     
     file_path = os.path.join("outfile", filename)
     
     if not os.path.exists(file_path):
+        logger.warning(f"用户 {username} 尝试下载不存在的文件: {filename}")
         raise HTTPException(status_code=404, detail="文件未找到")
     
     if not os.path.isfile(file_path):
+        logger.warning(f"用户 {username} 尝试下载的路径不是文件: {filename}")
         raise HTTPException(status_code=400, detail="路径不是文件")
     
+    logger.info(f"用户 {username} 下载文件: {filename}")
     return FileResponse(file_path, filename=filename)
 
 @app.post("/api/tasks/{task_alias}/toggle")
@@ -210,11 +242,16 @@ async def handle_task_action(action: str, device: str, task_alias: str, user: di
     if not user: 
         raise HTTPException(status_code=401)
     
+    username = user.get("username", "Unknown")
+    logger.info(f"用户 {username} 尝试对任务 '{task_alias}' 在设备 '{device}' 上执行操作 '{action}'")
+    
     if action not in ["enable", "disable"]:
+        logger.warning(f"用户 {username} 对任务 '{task_alias}' 执行了无效操作: {action}")
         raise HTTPException(status_code=400, detail="无效的操作，仅支持 'enable' 或 'disable'")
     
     config: AppConfig = app_state.get("config")
     if not config:
+        logger.error(f"用户 {username} 操作任务 '{task_alias}' 失败: 系统配置未加载")
         raise HTTPException(status_code=500, detail="配置未加载")
     
     # 查找对应的任务
@@ -225,15 +262,18 @@ async def handle_task_action(action: str, device: str, task_alias: str, user: di
             break
     
     if not task:
+        logger.warning(f"用户 {username} 尝试操作不存在的任务: {task_alias}")
         raise HTTPException(status_code=404, detail=f"任务 {task_alias} 未找到")
     
     # 检查任务是否针对指定设备
     if device not in task.targets:
+        logger.warning(f"用户 {username} 尝试在设备 '{device}' 上操作任务 '{task_alias}'，但任务不针对该设备")
         raise HTTPException(status_code=400, detail=f"任务 {task_alias} 不针对设备 {device}")
     
     # 获取配置文件路径
     config_path = app_state.get("config_path")
     if not config_path:
+        logger.error(f"用户 {username} 操作任务 '{task_alias}' 失败: 配置文件路径未设置")
         raise HTTPException(status_code=500, detail="配置文件路径未设置")
     
     # 读取原始配置文件内容
@@ -243,30 +283,37 @@ async def handle_task_action(action: str, device: str, task_alias: str, user: di
         
         # 解析YAML配置
         config_data = yaml.safe_load(config_content)
+        logger.debug(f"用户 {username} 成功读取配置文件内容")
     except Exception as e:
+        logger.error(f"用户 {username} 操作任务 '{task_alias}' 失败: 读取配置文件失败 - {e}")
         raise HTTPException(status_code=500, detail=f"读取配置文件失败: {e}")
     
     # 查找并更新对应任务的启用状态
     task_found = False
     for t in config_data.get('tasks', []):
         if t.get('alias') == task_alias:
-            t['enabled'] = (action == "enable")
+            old_status = t.get('enabled', False)
+            new_status = (action == "enable")
+            t['enabled'] = new_status
             task_found = True
+            logger.info(f"用户 {username} 将任务 '{task_alias}' 状态从 {old_status} 更新为 {new_status}")
             break
     
     if not task_found:
+        logger.warning(f"用户 {username} 尝试操作的任务 '{task_alias}' 在配置文件中未找到")
         raise HTTPException(status_code=404, detail=f"任务 {task_alias} 在配置文件中未找到")
     
     # 将更新后的配置写回文件
     try:
         with open(config_path, 'w', encoding='utf-8') as f:
             yaml.safe_dump(config_data, f, default_flow_style=False, allow_unicode=True, indent=2)
-        logger.info(f"任务 {task_alias} 已{action}，配置已更新到 {config_path}")
+        logger.info(f"用户 {username} 成功更新配置文件 {config_path}")
     except Exception as e:
+        logger.error(f"用户 {username} 更新配置文件失败: {e}")
         raise HTTPException(status_code=500, detail=f"写入配置文件失败: {e}")
     
     # 由于配置文件已更新，watch模块会自动检测到变更并重新加载配置和任务
-    logger.info(f"任务 {task_alias} 在设备 {device} 上已{action}，等待配置重载...")
+    logger.info(f"用户 {username} 对任务 '{task_alias}' 在设备 '{device}' 上的操作 '{action}' 完成，等待配置重载...")
     return {"status": "success", "message": f"任务 {task_alias} 已{action}，配置将在后台自动更新"}
 
 # 注意：以下是需要调度器实现的API的存根 (stub)

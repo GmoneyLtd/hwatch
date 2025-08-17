@@ -1,4 +1,3 @@
-
 import sys
 from loguru import logger
 
@@ -25,10 +24,11 @@ def setup_logging(level="INFO", rotation="10 MB", retention="7 days"):
         colorize=True,
     )
 
-    # 通用应用日志，记录所有模块的DEBUG及以上级别日志
+    # 通用应用日志，只记录主应用(__main__)和应用状态相关的日志
     logger.add(
         "log/app.log",
         level="DEBUG",
+        filter=lambda record: record["name"] in ["__main__", "core.ulog", "core.config_loader", "core.database"] or record["name"].startswith("core.") and not any(mod in record["name"] for mod in ["collector", "scheduler", "web_server", "watch"]),
         rotation=rotation,
         retention=retention,
         enqueue=True,  # 使日志记录在多线程/多进程环境中安全
@@ -43,12 +43,11 @@ def setup_logging(level="INFO", rotation="10 MB", retention="7 days"):
         logger.add(
             f"log/{module_name}.log",
             level="DEBUG",
-            filter=lambda record: record["name"].startswith(f"core.{module_name}"),
+            filter=lambda record, module=module_name: record["name"] == f"core.{module}" or record["name"].startswith(f"core.{module}."),
             rotation=rotation,
             retention=retention,
             enqueue=True,
-            format="{time} {level} {message}",
+            format="{time} {level} {name}:{function}:{line} {message}",
         )
 
     logger.info(f"日志系统初始化完成，控制台级别: {level.upper()}")
-
