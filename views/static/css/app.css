@@ -120,6 +120,7 @@ body {
     text-align: center;
     padding: 12px 15px;
     text-decoration: none;
+    font-family: inherit;
     font-weight: 500;
     font-size: 13px;
     transition: all 0.2s ease;
@@ -201,9 +202,15 @@ body {
 
 .data-table th,
 .data-table td {
-    padding: 16px 20px;
+    padding: 8px 15px;
     text-align: left;
     border-bottom: 1px solid var(--color-light-gray);
+}
+
+.data-table td {
+    font-weight: 300;
+    font-size: 15px;
+    font-family: 'OPPO Sans', Arial, sans-serif;
 }
 
 .data-table th:nth-last-child(-n+2),
@@ -266,7 +273,7 @@ body {
 
 /* Buttons */
 .btn {
-    padding: 8px 10px;
+    padding: 6px 10px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
