@@ -103,7 +103,7 @@
                         </div>
                         <div class="filter-group">
                             <label for="deviceDropdown">Devices</label>
-                            <div class="dropdown" id="deviceDropdown" style="display: none;">
+                            <div class="dropdown" id="deviceDropdown">
                                 <button type="button" class="dropdown-toggle" id="dropdownToggle">
                                     Select devices <span class="device-count" id="deviceCount"></span>
                                 </button>
