@@ -259,15 +259,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const row = document.createElement('tr');
             // 获取目标设备的IP地址信息
             let deviceInfo = 'N/A';
+            let ipInfo = 'N/A';
             if (task.targets && task.targets.length > 0) {
-                // 这里应该从配置中获取设备的IP地址，暂时显示设备名称
                 deviceInfo = task.targets.join(', ');
+            }
+            if (task.target_ips && task.target_ips.length > 0) {
+                ipInfo = task.target_ips.join(', ');
             }
             
             row.innerHTML = `
                 <td>${deviceInfo}</td>
                 <td>${task.alias}</td>
-                <td>N/A</td>
+                <td>${ipInfo}</td>
                 <td>${task.protocol || 'N/A'}</td>
                 <td>${task.schedule_seconds || 'N/A'}</td>
                 <td>${task.schedule_mode || 'N/A'}</td>

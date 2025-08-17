@@ -97,3 +97,35 @@ class TaskScheduler:
         logger.info("关闭调度器...")
         self.scheduler.shutdown()
 
+    def remove_job(self, job_id: str):
+        """从调度器中移除指定作业"""
+        try:
+            self.scheduler.remove_job(job_id)
+            logger.info(f"已从调度器移除作业 {job_id}")
+        except Exception as e:
+            logger.warning(f"从调度器移除作业 {job_id} 失败: {e}")
+
+    def schedule_task_for_device(self, task: TaskConfig, device: DeviceConfig):
+        """为特定设备安排任务"""
+        job_id = f"{task.alias}_{device.name}"
+        schedule = task.schedule
+        
+        # 如果任务已存在，先移除
+        self.remove_job(job_id)
+        
+        # 如果任务被禁用，则不安排
+        if not task.enabled:
+            logger.info(f"任务 {task.alias} 已禁用，不会安排作业")
+            return
+
+        # 安排新作业
+        if schedule.frequency == 1:
+            self.scheduler.add_job(self._execute_job, 'date', run_date=datetime.now() + timedelta(seconds=1), args=[task, device], id=job_id)
+            logger.info(f"已安排作业 {job_id} (仅执行一次)。")
+        elif schedule.mode == 'interval':
+            self.scheduler.add_job(self._execute_job, IntervalTrigger(seconds=schedule.seconds), args=[task, device], id=job_id)
+            logger.info(f"已安排作业 {job_id} (interval模式, 每 {schedule.seconds} 秒)。")
+        elif schedule.mode == 'delay':
+            # delay 模式的第一次执行是立即执行
+            self.scheduler.add_job(self._execute_job, 'date', run_date=datetime.now() + timedelta(seconds=1), args=[task, device], id=job_id)
+            logger.info(f"已安排作业 {job_id} (delay模式, 首次执行)。")

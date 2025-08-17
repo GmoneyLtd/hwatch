@@ -87,3 +87,29 @@ def load_config(config_path: str) -> Optional[AppConfig]:
         logger.error(f"加载配置时发生未知错误: {e}")
         return None
 
+
+def save_config(config: AppConfig, config_path: str) -> bool:
+    """
+    将配置保存到YAML文件。
+
+    Args:
+        config (AppConfig): 要保存的配置对象。
+        config_path (str): 配置文件的路径。
+
+    Returns:
+        bool: 保存成功返回True，否则返回False。
+    """
+    logger.info(f"开始保存配置到 {config_path}...")
+    try:
+        # 将Pydantic模型转换为字典
+        config_dict = config.model_dump()
+        
+        # 保存到YAML文件
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(config_dict, f, default_flow_style=False, allow_unicode=True, indent=2)
+        
+        logger.success("配置保存成功！")
+        return True
+    except Exception as e:
+        logger.error(f"保存配置时发生错误: {e}")
+        return False

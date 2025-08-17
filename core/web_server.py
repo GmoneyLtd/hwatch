@@ -87,10 +87,22 @@ async def get_tasks(user: dict = Depends(get_current_user)):
         return []
     # 返回前端需要的数据格式
     task_list = []
+    # 创建设备映射以便快速查找
+    device_map = {device.name: device for device in config.devices}
     for task in config.tasks:
+        # 获取任务目标设备的IP地址
+        target_ips = []
+        target_devices = []
+        for target_name in task.targets:
+            device = device_map.get(target_name)
+            if device:
+                target_devices.append(device.name)
+                target_ips.append(device.ip)
+        
         task_list.append({
             "alias": task.alias,
-            "targets": task.targets,
+            "targets": target_devices,
+            "target_ips": target_ips,
             "protocol": task.protocol,
             "type": task.type or 'N/A',
             "schedule_mode": task.schedule.mode or 'run_once',
@@ -183,8 +195,6 @@ async def download_outfile(filename: str, user: dict = Depends(get_current_user)
     
     return FileResponse(file_path, filename=filename)
 
-# 注意：以下是需要调度器实现的API的存根 (stub)
-
 @app.post("/api/tasks/{task_alias}/toggle")
 async def toggle_task_enabled(task_alias: str, user: dict = Depends(get_current_user)):
     if not user: raise HTTPException(status_code=401)
@@ -195,3 +205,68 @@ async def toggle_task_enabled(task_alias: str, user: dict = Depends(get_current_
     # 3. 可能需要重写配置文件以持久化状态
     return {"status": "pending", "message": "调度器逻辑未实现"}
 
+@app.post("/api/tasks/{action}/{device}/{task_alias}")
+async def handle_task_action(action: str, device: str, task_alias: str, user: dict = Depends(get_current_user)):
+    if not user: 
+        raise HTTPException(status_code=401)
+    
+    if action not in ["enable", "disable"]:
+        raise HTTPException(status_code=400, detail="无效的操作，仅支持 'enable' 或 'disable'")
+    
+    config: AppConfig = app_state.get("config")
+    if not config:
+        raise HTTPException(status_code=500, detail="配置未加载")
+    
+    # 查找对应的任务
+    task = None
+    for t in config.tasks:
+        if t.alias == task_alias:
+            task = t
+            break
+    
+    if not task:
+        raise HTTPException(status_code=404, detail=f"任务 {task_alias} 未找到")
+    
+    # 检查任务是否针对指定设备
+    if device not in task.targets:
+        raise HTTPException(status_code=400, detail=f"任务 {task_alias} 不针对设备 {device}")
+    
+    # 获取配置文件路径
+    config_path = app_state.get("config_path")
+    if not config_path:
+        raise HTTPException(status_code=500, detail="配置文件路径未设置")
+    
+    # 读取原始配置文件内容
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config_content = f.read()
+        
+        # 解析YAML配置
+        config_data = yaml.safe_load(config_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"读取配置文件失败: {e}")
+    
+    # 查找并更新对应任务的启用状态
+    task_found = False
+    for t in config_data.get('tasks', []):
+        if t.get('alias') == task_alias:
+            t['enabled'] = (action == "enable")
+            task_found = True
+            break
+    
+    if not task_found:
+        raise HTTPException(status_code=404, detail=f"任务 {task_alias} 在配置文件中未找到")
+    
+    # 将更新后的配置写回文件
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(config_data, f, default_flow_style=False, allow_unicode=True, indent=2)
+        logger.info(f"任务 {task_alias} 已{action}，配置已更新到 {config_path}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"写入配置文件失败: {e}")
+    
+    # 由于配置文件已更新，watch模块会自动检测到变更并重新加载配置和任务
+    logger.info(f"任务 {task_alias} 在设备 {device} 上已{action}，等待配置重载...")
+    return {"status": "success", "message": f"任务 {task_alias} 已{action}，配置将在后台自动更新"}
+
+# 注意：以下是需要调度器实现的API的存根 (stub)

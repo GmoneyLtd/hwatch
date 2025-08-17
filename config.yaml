@@ -1,103 +1,93 @@
-# ===================================================================
-# Devices: 定义所有需要连接的网络设备
-# ===================================================================
 devices:
-  - name: Router_A
-    ip: 192.168.1.100
-    connection:
-      ssh:
-        username: admin
-        password: admin123  # 安全警告: 建议后续替换为SSH密钥
-        port: 22
-        timeout: 10
-        retry: 3
-      snmp:
-        community: public
-        port: 161
-        timeout: 10
-        retry: 3
-
-  - name: Fortinet_60
-    ip: 192.168.2.1
-    connection:
-      snmp:
-        community: awatch
-        port: 161
-        timeout: 2
-        retry: 0
-
-# ===================================================================
-# Tasks: 定义所有要执行的监控任务
-# ===================================================================
+- connection:
+    snmp:
+      community: public
+      port: 161
+      retry: 3
+      timeout: 10
+    ssh:
+      password: admin123
+      port: 22
+      retry: 3
+      timeout: 10
+      username: admin
+  ip: 192.168.1.100
+  name: Router_A
+- connection:
+    snmp:
+      community: awatch
+      port: 161
+      retry: 0
+      timeout: 2
+  ip: 192.168.2.1
+  name: Fortinet_60
 tasks:
-  # 任务1: (SNMP - 无限次, 固定频率) 获取Fortinet的CPU使用率
-  - alias: check_fortinet_cpu_usage
-    enabled: true
-    targets: [Fortinet_60]
-    protocol: snmp
-    type: snmpwalk
-    oid: 1.3.6.1.4.1.12356.101.4.4.2.1.2
-    schedule:
-      frequency: 0       # 0 = 无限次执行
-      mode: interval     # 按固定间隔触发
-      seconds: 5         # 每5秒一次
-    storage: file
-
-  # 任务2: (SSH - 无限次, 完成后延迟) 运行耗时的show tech-support
-  - alias: run_router_a_tech_support
-    enabled: true
-    targets: [Router_A]
-    protocol: ssh
-    command: show tech-support
-    schedule:
-      frequency: 0       # 0 = 无限次执行
-      mode: delay        # 在任务完成后，等待指定秒数
-      seconds: 120       # 完成后等待2分钟
-    storage: file
-
-  # 任务3: (SSH - 执行1次) 获取Router_A的版本号
-  - alias: get_router_a_version
-    enabled: false
-    targets: [Router_A]
-    protocol: ssh
-    command: show version
-    schedule:
-      frequency: 1       # 1 = 仅执行一次
-    storage: sqlite
-
-  # 任务4: (SSH - 执行1次, 无需存储)
-  - alias: clear_router_a_counters
-    enabled: false
-    targets: [Router_A]
-    protocol: ssh
-    command: clear counters
-    schedule:
-      frequency: 1       # 1 = 仅执行一次
-    storage: null
-
-  # --- 其他任务示例 ---
-  - alias: check_router_a_datapath
-    enabled: true
-    targets: [Router_A]
-    protocol: ssh
-    command: show datapath network ingress
-    schedule:
-      frequency: 0
-      mode: delay
-      seconds: 60
-    parse:
-      regex: '\|\s*G\s*\|\s*\[000\]\s*\|\s*Current Entries\s+(\d+)'
-      labels: [queue_empty_count, queue_empty_recovery]
-    storage: sqlite
-
-  - alias: check_fortinet_session_count
-    enabled: true
-    targets: [Fortinet_60]
-    protocol: snmp
-    type: snmpget
-    oid: 1.3.6.1.4.1.12356.101.4.1.8.0
-    schedule:
-      frequency: 0
-      mode: interval
-      seconds: 5
-    storage: sqlite
+- alias: check_fortinet_cpu_usage
+  enabled: true
+  oid: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+  protocol: snmp
+  schedule:
+    frequency: 0
+    mode: interval
+    seconds: 5
+  storage: file
+  targets:
+  - Fortinet_60
+  type: snmpwalk
+- alias: run_router_a_tech_support
+  command: show tech-support
+  enabled: true
+  protocol: ssh
+  schedule:
+    frequency: 0
+    mode: delay
+    seconds: 120
+  storage: file
+  targets:
+  - Router_A
+- alias: get_router_a_version
+  command: show version
+  enabled: true
+  protocol: ssh
+  schedule:
+    frequency: 1
+  storage: sqlite
+  targets:
+  - Router_A
+- alias: clear_router_a_counters
+  command: clear counters
+  enabled: true
+  protocol: ssh
+  schedule:
+    frequency: 1
+  storage: null
+  targets:
+  - Router_A
+- alias: check_router_a_datapath
+  command: show datapath network ingress
+  enabled: true
+  parse:
+    labels:
+    - queue_empty_count
+    - queue_empty_recovery
+    regex: \|\s*G\s*\|\s*\[000\]\s*\|\s*Current Entries\s+(\d+)
+  protocol: ssh
+  schedule:
+    frequency: 0
+    mode: delay
+    seconds: 60
+  storage: sqlite
+  targets:
+  - Router_A
+- alias: check_fortinet_session_count
+  enabled: true
+  oid: 1.3.6.1.4.1.12356.101.4.1.8.0
+  protocol: snmp
+  schedule:
+    frequency: 0
+    mode: interval
+    seconds: 5
+  storage: sqlite
+  targets:
+  - Fortinet_60
+  type: snmpget
