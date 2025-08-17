@@ -13,3 +13,5 @@ outfile/*
 log/*
 *.db-wal
 *.db-shm
+# Environment variables
+.env.local
