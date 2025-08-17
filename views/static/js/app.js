@@ -435,15 +435,53 @@ document.addEventListener('DOMContentLoaded', function () {
             const alias = button.dataset.alias;
             const action = button.dataset.action;
             
+            // 立即更新UI状态
+            updateTaskUI(button, action);
+            
             const requestUrl = `/api/tasks/${action}/${device}/${alias}`;
             console.log(`Sending ${action} request to: ${requestUrl}`);
             try {
                 const response = await fetch(requestUrl, { method: 'POST' });
                 console.log(`Response for ${action} task:`, response);
-                loadDashboardData();
+                if (!response.ok) {
+                    // 如果请求失败，恢复UI状态
+                    const reverseAction = action === 'enable' ? 'disable' : 'enable';
+                    updateTaskUI(button, reverseAction);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // 由于配置更新是异步的，我们不重新加载数据，而是依赖UI状态更新
             } catch (error) {
                 console.error(`Error ${action}ing task:`, error);
                 displayErrorMessage(`Failed to ${action} task. Please try again.`);
+            }
+        }
+    }
+
+    function updateTaskUI(button, action) {
+        // 更新按钮状态
+        if (action === 'enable') {
+            button.dataset.action = 'disable';
+            button.classList.remove('btn-success');
+            button.classList.add('btn-danger');
+            button.innerHTML = '<i class="fas fa-stop"></i> Disable';
+        } else {
+            button.dataset.action = 'enable';
+            button.classList.remove('btn-danger');
+            button.classList.add('btn-success');
+            button.innerHTML = '<i class="fas fa-play"></i> Enable';
+        }
+        
+        // 更新状态标签
+        const statusBadge = button.closest('tr').querySelector('.status-badge');
+        if (statusBadge) {
+            if (action === 'enable') {
+                statusBadge.classList.remove('disabled');
+                statusBadge.classList.add('enabled');
+                statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Enabled';
+            } else {
+                statusBadge.classList.remove('enabled');
+                statusBadge.classList.add('disabled');
+                statusBadge.innerHTML = '<i class="fas fa-times-circle"></i> Disabled';
             }
         }
     }
@@ -463,10 +501,14 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Response from config save:', response);
             if (response.ok) {
                 displayErrorMessage('Config saved successfully!', 'config-error');
+                // 成功消息也应在5秒后自动隐藏
+                setTimeout(() => {
+                    hideErrorMessage('config-error');
+                }, 2000);
             } else {
-                const error = await response.json();
-                console.error('Error response from config save:', error);
-                displayErrorMessage(`Error saving config: ${error.message}`, 'config-error');
+                const errorText = await response.text();
+                console.error('Error response from config save:', errorText);
+                displayErrorMessage(`Error saving config: ${errorText}`, 'config-error');
             }
         } catch (error) {
             console.error('Error saving config:', error);

@@ -126,8 +126,8 @@ async def get_config(user: dict = Depends(get_current_user)):
 @app.post("/api/config")
 async def save_config(request: Request, user: dict = Depends(get_current_user)):
     if not user: raise HTTPException(status_code=401)
-    data = await request.json()
-    content = data.get('content')
+    content = await request.body()
+    content = content.decode('utf-8')
     config_path = app_state.get("config_path")
     
     # 验证YAML格式

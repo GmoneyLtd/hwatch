@@ -63,7 +63,7 @@
             <!-- Config View -->
             <section id="config-view" class="view">
                 <div class="view-content">
-                    <div id="config-error" class="error-message"></div>
+                    <div id="config-error" class="error-message" style="display: none;"></div>
                     <form id="config-form">
                         <div class="form-group">
                             <div id="config-editor" class="config-editor"></div>

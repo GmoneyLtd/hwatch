@@ -65,7 +65,7 @@ tasks:
   - Router_A
 - alias: check_router_a_datapath
   command: show datapath network ingress
-  enabled: true
+  enabled: false
   parse:
     labels:
     - queue_empty_count
