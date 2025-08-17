@@ -25,7 +25,7 @@
 
                 {% if error %}
                 <div class="error-message">
-                    <p>{{ error }}</p>
+                    {{ error }}
                 </div>
                 {% endif %}
 

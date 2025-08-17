@@ -56,7 +56,7 @@ async def handle_login(request: Request, username: str = Form(...), password: st
     if not user or user["password"] != password:
         return templates.TemplateResponse(
             "login.tpl",
-            {"request": request, "error": "无效的用户名或密码"},
+            {"request": request, "error": "Invalid username or password"},
             status_code=status.HTTP_401_UNAUTHORIZED
         )
     
