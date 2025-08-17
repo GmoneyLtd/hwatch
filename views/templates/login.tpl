@@ -1,26 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Hwatch - Login</title>
-    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hwatch - Play Login</title>
+    <link rel="stylesheet" href="/static/css/login.css">
 </head>
+
 <body>
-    <div class="login-container">
-        <h2><i class="fas fa-user-lock"></i> Login</h2>
-        <form action="/login" method="post">
-            <div class="input-group">
-                <i class="fas fa-user input-icon"></i>
-                <input type="text" name="username" placeholder="Username" required>
+    <header>
+        <div class="container">
+            <h1>Hwatch</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="upload-container">
+            <div class="upload-box">
+                <h2>
+                    <span class="matsym big" aria-hidden="true">manage_accounts</span>
+                    Admin Login
+                </h2>
+
+                % if error:
+                <div class="error-message">
+                    <p>{{ error }}</p>
+                </div>
+                % end
+
+                <form action="/login" method="post" class="login-form">
+                    <div class="form-group">
+                        <label for="username">User</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-upload">Login</button>
+                </form>
             </div>
-            <div class="input-group">
-                <i class="fas fa-lock input-icon"></i>
-                <input type="password" name="password" placeholder="Password" required>
-            </div>
-            <button type="submit">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-        </form>
-    </div>
+        </div>
+    </main>
 </body>
+
 </html>

@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="/static/css/app.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ace.js"></script>
@@ -14,22 +13,22 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1><i class="fas fa-tachometer-alt"></i> Hwatch - Dashboard</h1>
+            <h1><span class="material-symbols-outlined">speed</span> Hwatch - Dashboard</h1>
             <nav class="app-nav">
                 <button class="nav-btn active" data-view="dashboard">
-                    <i class="fas fa-home"></i>
+                    <span class="material-symbols-outlined">home</span>
                     <span>Dashboard</span>
                 </button>
                 <button class="nav-btn" data-view="config">
-                    <i class="fas fa-cog"></i>
+                    <span class="material-symbols-outlined">settings</span>
                     <span>Config</span>
                 </button>
                 <button class="nav-btn" data-view="chart">
-                    <i class="fas fa-chart-line"></i>
+                    <span class="material-symbols-outlined">show_chart</span>
                     <span>Chart</span>
                 </button>
                 <button class="nav-btn" data-view="outfile">
-                    <i class="fas fa-file-alt"></i>
+                    <span class="material-symbols-outlined">description</span>
                     <span>Outfile</span>
                 </button>
             </nav>
@@ -44,14 +43,14 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th><i class="fas fa-desktop"></i> Device</th>
-                                <th><i class="fas fa-tag"></i> Alias</th>
-                                <th><i class="fas fa-network-wired"></i> IP</th>
-                                <th><i class="fas fa-list"></i> Type</th>
-                                <th><i class="fas fa-sync-alt"></i> Frequency</th>
-                                <th><i class="fas fa-calendar-alt"></i> Periodic</th>
-                                <th><i class="fas fa-toggle-on"></i> Enabled</th>
-                                <th><i class="fas fa-cogs"></i> Action</th>
+                                <th><div><span class="material-symbols-outlined">desktop_windows</span> Device</div></th>
+                                <th><div><span class="material-symbols-outlined">label</span> Alias</div></th>
+                                <th><div><span class="material-symbols-outlined">hub</span> IP</div></th>
+                                <th><div><span class="material-symbols-outlined">list</span> Type</div></th>
+                                <th><div><span class="material-symbols-outlined">sync</span> Frequency</div></th>
+                                <th><div><span class="material-symbols-outlined">event</span> Periodic</div></th>
+                                <th><div><span class="material-symbols-outlined">toggle_on</span> Enabled</div></th>
+                                <th><div><span class="material-symbols-outlined">tune</span> Action</div></th>
                             </tr>
                         </thead>
                         <tbody id="tasks-table-body">
@@ -71,7 +70,7 @@
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> Save
+                                <span class="material-symbols-outlined">save</span> Save
                             </button>
                         </div>
                     </form>
