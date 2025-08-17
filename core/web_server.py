@@ -54,7 +54,11 @@ async def login_page(request: Request):
 async def handle_login(request: Request, username: str = Form(...), password: str = Form(...)):
     user = FAKE_USERS_DB.get(username)
     if not user or user["password"] != password:
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return templates.TemplateResponse(
+            "login.tpl",
+            {"request": request, "error": "无效的用户名或密码"},
+            status_code=status.HTTP_401_UNAUTHORIZED
+        )
     
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     # 在实际应用中，应使用安全的会话管理
