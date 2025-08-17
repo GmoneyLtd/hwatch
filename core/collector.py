@@ -5,28 +5,99 @@ from pysnmp.hlapi.asyncio import (
 )
 from loguru import logger
 from typing import Dict, Any, Optional
+import asyncio
+import time
 
 from core.config_loader import TaskConfig, DeviceConfig
+
+# SSH连接池字典，键为 (task_alias, device_name) 元组，值为连接对象和最后使用时间
+_ssh_connection_pools: Dict[tuple, Dict[str, Any]] = {}
+
+async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncssh.SSHClientConnection:
+    """从连接池获取SSH连接，如果不存在或已断开则创建新连接"""
+    pool_key = (task.alias, device.name)
+    conn_details = device.connection.ssh
+    
+    # 检查连接池中是否已有连接
+    if pool_key in _ssh_connection_pools:
+        conn_entry = _ssh_connection_pools[pool_key]
+        conn = conn_entry['connection']
+        
+        # 检查连接是否仍然有效
+        if conn._transport is not None and not conn._transport.at_eof():
+            # 更新最后使用时间
+            conn_entry['last_used'] = time.time()
+            logger.debug(f"[SSH] 复用现有连接: {task.alias} on {device.name}")
+            return conn
+        else:
+            # 连接已断开，清理连接池条目
+            del _ssh_connection_pools[pool_key]
+            logger.debug(f"[SSH] 清理已断开连接: {task.alias} on {device.name}")
+    
+    # 创建新连接
+    logger.info(f"[SSH] 建立新连接: {task.alias} on {device.name}")
+    conn = await asyncssh.connect(
+        device.ip,
+        port=conn_details.port,
+        username=conn_details.username,
+        password=conn_details.password,
+        known_hosts=None,  # 在生产中应考虑更安全的主机密钥验证
+        connect_timeout=conn_details.timeout
+    )
+    
+    # 将连接添加到连接池
+    _ssh_connection_pools[pool_key] = {
+        'connection': conn,
+        'last_used': time.time(),
+        'task': task.alias,
+        'device': device.name
+    }
+    
+    return conn
+
+async def _cleanup_ssh_connections():
+    """清理超时的SSH连接（超过10分钟未使用）"""
+    current_time = time.time()
+    expired_keys = []
+    
+    for pool_key, conn_entry in _ssh_connection_pools.items():
+        if current_time - conn_entry['last_used'] > 600:  # 10分钟 = 600秒
+            expired_keys.append(pool_key)
+    
+    for pool_key in expired_keys:
+        conn_entry = _ssh_connection_pools[pool_key]
+        conn = conn_entry['connection']
+        try:
+            conn.close()
+            await conn.wait_closed()
+            logger.info(f"[SSH] 清理超时连接: {conn_entry['task']} on {conn_entry['device']}")
+        except Exception as e:
+            logger.warning(f"[SSH] 关闭超时连接时出错: {e}")
+        finally:
+            del _ssh_connection_pools[pool_key]
 
 async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
     """执行单个SSH采集任务。"""
     conn_details = device.connection.ssh
     logger.info(f"[SSH] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - Command: {task.command}")
     try:
-        async with asyncssh.connect(
-            device.ip,
-            port=conn_details.port,
-            username=conn_details.username,
-            password=conn_details.password,
-            known_hosts=None,  # 在生产中应考虑更安全的主机密钥验证
-            connect_timeout=conn_details.timeout
-        ) as conn:
-            result = await conn.run(task.command, check=True)
-            logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name}")
-            return result.stdout
+        # 获取SSH连接（从连接池或新建）
+        conn = await _get_ssh_connection(task, device)
+        
+        # 执行命令
+        result = await conn.run(task.command, check=True)
+        logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name}")
+        return result.stdout
     except Exception as e:
         logger.error(f"[SSH] 任务 {task.alias} on {device.name} 执行失败: {e}")
+        # 从连接池中移除失效连接
+        pool_key = (task.alias, device.name)
+        if pool_key in _ssh_connection_pools:
+            del _ssh_connection_pools[pool_key]
         return f"ERROR: {e}"
+    finally:
+        # 定期清理超时连接
+        await _cleanup_ssh_connections()
 
 async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
     """执行单个SNMP采集任务。"""
