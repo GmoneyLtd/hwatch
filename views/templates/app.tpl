@@ -123,7 +123,7 @@
             <!-- Outfile View -->
             <section id="outfile-view" class="view">
                 <div class="view-content">
-                    <h2>Outfile Files</h2>
+                    <h3>Outfile Files</h3>
                     <div id="outfile-list">
                         <!-- File list will be loaded here -->
                     </div>

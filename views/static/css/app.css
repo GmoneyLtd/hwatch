@@ -6,8 +6,13 @@
 }
 
 @font-face {
-    font-family: 'CeraRoundProBold';
-    src: url('../font/Cera\ Round\ Pro\ Bold.woff2') format('woff2');
+    font-family: 'CeraRoundPro-Bold';
+    src: url('../font/CeraRoundPro-Bold.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'CeraRoundPro-Regular';
+    src: url('../font/CeraRoundPro-Regular.woff2') format('woff2');
 }
 
 .material-symbols-outlined {
@@ -53,7 +58,8 @@
 
 
 body {
-    font-family: "CeraRoundProBold", BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "CeraRoundPro-Bold", BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
     background: var(--color-secondary);
     margin: 0;
@@ -208,9 +214,9 @@ body {
 }
 
 .data-table td {
-    font-weight: 300;
-    font-size: 15px;
-    font-family: 'OPPO Sans', Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-family: "CeraRoundPro-Regular", BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .data-table th:nth-last-child(-n+2),
@@ -593,10 +599,13 @@ body {
 }
 
 .file-list li .file-info {
+    font-family: "CeraRoundPro-Regular", BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    letter-spacing: 1px;
+    font-size: 12px;
     flex-basis: 0;
     flex-grow: 1;
     display: grid;
-    grid-template-columns: auto 3fr 1fr 1fr; /* Icon, Name, Size, Created At */
+    grid-template-columns: auto 2fr 1fr 1fr; /* Icon, Name, Size, Created At */
     align-items: center;
     gap: 10px; /* Space between columns */
 }
