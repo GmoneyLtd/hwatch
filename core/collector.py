@@ -1,4 +1,3 @@
-
 import asyncssh
 import re
 from pysnmp.hlapi.asyncio import (
@@ -36,10 +35,17 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
     
     snmp_engine = SnmpEngine()
     try:
+        # 修复第一个错误：正确传递参数给UdpTransportTarget
+        transport_target = await UdpTransportTarget.create(
+            (device.ip, conn_details.port), 
+            timeout=conn_details.timeout, 
+            retries=conn_details.retry
+        )
+        
         error_indication, error_status, error_index, var_binds = await get_cmd(
             snmp_engine,
             CommunityData(conn_details.community, mpModel=0), # v1
-            UdpTransportTarget((device.ip, conn_details.port), timeout=conn_details.timeout, retries=conn_details.retry),
+            transport_target,
             ContextData(),
             ObjectType(ObjectIdentity(task.oid))
         )
@@ -57,7 +63,9 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         logger.error(f"[SNMP] 任务 {task.alias} on {device.name} 执行失败: {e}")
         return f"ERROR: {e}"
     finally:
-        snmp_engine.transportDispatcher.closeDispatcher()
+        # 修复第二个错误：检查transportDispatcher是否为None
+        if snmp_engine.transportDispatcher is not None:
+            snmp_engine.transportDispatcher.closeDispatcher()
 
 
 def _parse_output(output: str, task: TaskConfig) -> Dict[str, Any]:
@@ -99,8 +107,3 @@ async def run_task(task: TaskConfig, device: DeviceConfig) -> Optional[Dict[str,
 
     # 将原始输出也加入结果，便于文件存储
     parsed_results = _parse_output(raw_output, task)
-    if "raw_output" not in parsed_results:
-        parsed_results["raw_output"] = raw_output
-
-    return parsed_results
-
