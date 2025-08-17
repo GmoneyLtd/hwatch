@@ -48,7 +48,7 @@
                                 <th><div><span class="material-symbols-outlined">hub</span> IP</div></th>
                                 <th><div><span class="material-symbols-outlined">list</span> Type</div></th>
                                 <th><div><span class="material-symbols-outlined">sync</span> Frequency</div></th>
-                                <th><div><span class="material-symbols-outlined">event</span> Periodic</div></th>
+                                <th><div><span class="material-symbols-outlined">event</span> Mode</div></th>
                                 <th><div><span class="material-symbols-outlined">toggle_on</span> Enabled</div></th>
                                 <th><div><span class="material-symbols-outlined">tune</span> Action</div></th>
                             </tr>

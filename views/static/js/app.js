@@ -177,6 +177,9 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch('/api/config');
             console.log('Response from /api/config:', response);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const config = await response.text();
             console.log('Parsed config data:', config);
             if (configEditor) {
@@ -254,23 +257,30 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         tasks.forEach(task => {
             const row = document.createElement('tr');
+            // 获取目标设备的IP地址信息
+            let deviceInfo = 'N/A';
+            if (task.targets && task.targets.length > 0) {
+                // 这里应该从配置中获取设备的IP地址，暂时显示设备名称
+                deviceInfo = task.targets.join(', ');
+            }
+            
             row.innerHTML = `
-                <td>${task[0]}</td>
-                <td>${task[1]}</td>
-                <td>${task[2] || 'N/A'}</td>
-                <td>${task[3]}</td>
-                <td>${task[4] || 'N/A'}</td>
-                <td>${task[5] || 'N/A'}</td>
+                <td>${deviceInfo}</td>
+                <td>${task.alias}</td>
+                <td>N/A</td>
+                <td>${task.protocol || 'N/A'}</td>
+                <td>${task.schedule_seconds || 'N/A'}</td>
+                <td>${task.schedule_mode || 'N/A'}</td>
                 <td>
-                    <span class="status-badge ${task[6] ? 'enabled' : 'disabled'}">
-                        <i class="fas ${task[6] ? 'fa-check-circle' : 'fa-times-circle'}"></i>
-                        ${task[6] ? 'Enabled' : 'Disabled'}
+                    <span class="status-badge ${task.enabled ? 'enabled' : 'disabled'}">
+                        <i class="fas ${task.enabled ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        ${task.enabled ? 'Enabled' : 'Disabled'}
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-sm ${task[6] ? 'btn-danger' : 'btn-success'}" data-device="${task[0]}" data-alias="${task[1]}" data-action="${task[6] ? 'disable' : 'enable'}">
-                        <i class="fas ${task[6] ? 'fa-stop' : 'fa-play'}"></i>
-                        ${task[6] ? 'Disable' : 'Enable'}
+                    <button class="btn btn-sm ${task.enabled ? 'btn-danger' : 'btn-success'}" data-device="${task.targets[0] || ''}" data-alias="${task.alias}" data-action="${task.enabled ? 'disable' : 'enable'}">
+                        <i class="fas ${task.enabled ? 'fa-stop' : 'fa-play'}"></i>
+                        ${task.enabled ? 'Disable' : 'Enable'}
                     </button>
                 </td>
             `;

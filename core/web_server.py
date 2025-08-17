@@ -1,7 +1,7 @@
 
 import os
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -106,7 +106,7 @@ async def get_config(user: dict = Depends(get_current_user)):
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        return {"content": content}
+        return Response(content=content, media_type="text/plain; charset=utf-8")
     except Exception as e:
         logger.error(f"读取配置文件失败: {e}")
         raise HTTPException(status_code=500, detail="无法读取配置文件")
