@@ -1,7 +1,7 @@
 
 import os
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -153,7 +153,35 @@ async def list_outfiles(user: dict = Depends(get_current_user)):
     if not os.path.exists(outfile_dir):
         return []
     files = os.listdir(outfile_dir)
-    return sorted([f for f in files if os.path.isfile(os.path.join(outfile_dir, f))], reverse=True)
+    file_list = []
+    for f in files:
+        file_path = os.path.join(outfile_dir, f)
+        if os.path.isfile(file_path):
+            stat = os.stat(file_path)
+            file_list.append({
+                "name": f,
+                "size": stat.st_size,
+                "created_at": stat.st_ctime
+            })
+    return sorted(file_list, key=lambda x: x["created_at"], reverse=True)
+
+@app.get("/outfile/{filename}")
+async def download_outfile(filename: str, user: dict = Depends(get_current_user)):
+    if not user: raise HTTPException(status_code=401)
+    
+    # 防止路径遍历攻击
+    if ".." in filename or filename.startswith("/"):
+        raise HTTPException(status_code=400, detail="无效的文件名")
+    
+    file_path = os.path.join("outfile", filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="文件未找到")
+    
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=400, detail="路径不是文件")
+    
+    return FileResponse(file_path, filename=filename)
 
 # 注意：以下是需要调度器实现的API的存根 (stub)
 

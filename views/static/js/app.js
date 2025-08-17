@@ -231,10 +231,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadOutfileList() {
         hideErrorMessage();
-        console.log('Requesting outfile list from /api/outfile/list');
+        console.log('Requesting outfile list from /api/outfiles');
         try {
-            const response = await fetch('/api/outfile/list');
-            console.log('Response from /api/outfile/list:', response);
+            const response = await fetch('/api/outfiles');
+            console.log('Response from /api/outfiles:', response);
             const files = await response.json();
             console.log('Parsed outfile list:', files);
             renderOutfileList(files);
@@ -291,16 +291,30 @@ document.addEventListener('DOMContentLoaded', function () {
         ul.className = 'file-list'; // Add a class for styling
 
         files.forEach(file => {
+            // 格式化文件大小
+            let sizeText = '';
+            if (file.size < 1024) {
+                sizeText = file.size + ' B';
+            } else if (file.size < 1024 * 1024) {
+                sizeText = (file.size / 1024).toFixed(1) + ' KB';
+            } else {
+                sizeText = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
+            // 格式化创建时间
+            const date = new Date(file.created_at * 1000);
+            const dateText = date.toLocaleString();
+
             const li = document.createElement('li');
             li.innerHTML = `
                 <div class="file-info">
                     <i class="fas fa-file"></i>
                     <span class="file-name" title="${file.name}">${file.name}</span>
-                    <span class="file-size">${file.size}</span>
-                    <span class="file-created-at">${file.created_at}</span>
+                    <span class="file-size">${sizeText}</span>
+                    <span class="file-created-at">${dateText}</span>
                 </div>
                 <div class="file-actions">
-                    <a href="/api/outfile/download/${file.name}" download="${file.name}" class="btn btn-success">Download</a>
+                    <a href="/outfile/${file.name}" download="${file.name}" class="btn btn-success">Download</a>
                 </div>
             `;
             ul.appendChild(li);
