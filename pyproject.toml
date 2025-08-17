@@ -12,6 +12,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "loguru>=0.7.3",
     "pysnmp>=7.1.21",
+    "python-multipart>=0.0.20",
     "pyyaml>=6.0.2",
     "uvicorn[standard]>=0.35.0",
     "watchdog>=6.0.0",

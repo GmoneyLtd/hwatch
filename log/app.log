@@ -1,0 +1,284 @@
+2025-08-17T00:38:51.554491+0800 INFO core.ulog:setup_logging:53 日志系统初始化完成，控制台级别: DEBUG
+2025-08-17T00:38:51.565843+0800 INFO core.database:init_db:26 数据库初始化成功。
+2025-08-17T00:38:51.566259+0800 INFO core.config_loader:load_config:63 开始从 config.yaml 加载配置...
+2025-08-17T00:38:51.574200+0800 SUCCESS core.config_loader:load_config:73 配置加载并验证成功！
+2025-08-17T00:38:51.574467+0800 DEBUG core.config_loader:load_config:74 加载了 2 个设备和 6 个任务。
+2025-08-17T00:38:51.579757+0800 INFO core.scheduler:schedule_all_tasks:62 清空现有作业，开始根据新配置重新调度...
+2025-08-17T00:38:51.580218+0800 INFO core.scheduler:schedule_all_tasks:86 已安排作业 check_fortinet_cpu_usage_Fortinet_60 (interval模式, 每 5 秒)。
+2025-08-17T00:38:51.582241+0800 INFO core.scheduler:schedule_all_tasks:90 已安排作业 run_router_a_tech_support_Router_A (delay模式, 首次执行)。
+2025-08-17T00:38:51.582589+0800 INFO core.scheduler:schedule_all_tasks:90 已安排作业 check_router_a_datapath_Router_A (delay模式, 首次执行)。
+2025-08-17T00:38:51.582976+0800 INFO core.scheduler:schedule_all_tasks:86 已安排作业 check_fortinet_session_count_Fortinet_60 (interval模式, 每 5 秒)。
+2025-08-17T00:38:51.585334+0800 INFO core.watch:start_watching:39 已启动对 config.yaml 的后台监控。
+2025-08-17T00:38:51.586636+0800 INFO core.scheduler:start:93 启动调度器...
+2025-08-17T00:38:51.589284+0800 INFO __main__:main:80 Hwatch 应用启动成功！访问 http://localhost:8080
+2025-08-17T00:38:52.582132+0800 INFO core.scheduler:_execute_job:23 开始执行作业: run_router_a_tech_support_Router_A
+2025-08-17T00:38:52.582693+0800 INFO core.collector:_run_ssh_task:15 [SSH] 开始执行任务 run_router_a_tech_support on Router_A (192.168.1.100) - Command: show tech-support
+2025-08-17T00:38:52.586641+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_router_a_datapath_Router_A
+2025-08-17T00:38:52.586946+0800 INFO core.collector:_run_ssh_task:15 [SSH] 开始执行任务 check_router_a_datapath on Router_A (192.168.1.100) - Command: show datapath network ingress
+2025-08-17T00:38:56.581092+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:38:56.581656+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:38:56.683292+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:38:56.686048+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:38:56.686232+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:38:56.758013+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:00.570952+0800 ERROR core.collector:_run_ssh_task:29 [SSH] 任务 run_router_a_tech_support on Router_A 执行失败: [Errno 51] Connect call failed ('192.168.1.100', 22)
+2025-08-17T00:39:00.572243+0800 INFO core.scheduler:_execute_job:41 作业 run_router_a_tech_support_Router_A 的结果已保存到 outfile/run_router_a_tech_support_Router_A_20250817003900.log
+2025-08-17T00:39:00.572902+0800 INFO core.scheduler:_execute_job:56 作业 run_router_a_tech_support_Router_A (delay模式) 已安排下一次运行于 2025-08-17 00:41:00.572577
+2025-08-17T00:39:00.573516+0800 ERROR core.collector:_run_ssh_task:29 [SSH] 任务 check_router_a_datapath on Router_A 执行失败: [Errno 51] Connect call failed ('192.168.1.100', 22)
+2025-08-17T00:39:00.574109+0800 WARNING core.collector:_parse_output:70 任务 check_router_a_datapath 的正则未匹配到任何内容。返回原始输出。
+2025-08-17T00:39:00.575948+0800 DEBUG core.database:save_result:49 成功为任务 check_router_a_datapath on Router_A 保存 0 条记录。
+2025-08-17T00:39:00.576575+0800 INFO core.scheduler:_execute_job:56 作业 check_router_a_datapath_Router_A (delay模式) 已安排下一次运行于 2025-08-17 00:40:00.576267
+2025-08-17T00:39:01.581201+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:01.581750+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:01.662595+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:01.664337+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:01.664495+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:01.740886+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:06.580782+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:06.581328+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:06.660368+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:06.662242+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:06.662415+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:06.733552+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:11.580519+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:11.580844+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:11.677130+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:11.679118+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:11.679351+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:11.758861+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:16.581536+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:16.581922+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:16.658677+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:16.660527+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:16.660702+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:16.734520+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:21.580492+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:21.580805+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:21.664107+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:21.665942+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:21.666113+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:21.739774+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:26.581202+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:26.581575+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:26.660462+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:26.662865+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:26.663039+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:26.733397+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:31.581177+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:31.581559+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:31.665592+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:31.667523+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:31.667719+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:31.742398+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:36.581389+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:36.581628+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:36.662300+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:36.664608+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:36.664871+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:36.762043+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:41.581100+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:41.581668+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:41.668357+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:41.670247+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:41.670414+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:41.740780+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:46.581383+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:46.581662+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:46.659908+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:46.661745+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:46.661917+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:46.737119+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:51.581707+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:51.582243+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:51.663521+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:51.665289+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:51.665458+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:51.737423+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:56.580654+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:39:56.581036+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:39:56.660702+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:39:56.662509+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:39:56.662687+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:39:56.737730+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:00.577765+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_router_a_datapath_Router_A
+2025-08-17T00:40:00.578163+0800 INFO core.collector:_run_ssh_task:15 [SSH] 开始执行任务 check_router_a_datapath on Router_A (192.168.1.100) - Command: show datapath network ingress
+2025-08-17T00:40:01.580595+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:01.580936+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:01.659283+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:01.661136+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:01.661305+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:01.738790+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:06.581509+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:06.581925+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:06.682775+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:06.685033+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:06.685257+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:06.793827+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:08.153448+0800 ERROR core.collector:_run_ssh_task:29 [SSH] 任务 check_router_a_datapath on Router_A 执行失败: [Errno 51] Connect call failed ('192.168.1.100', 22)
+2025-08-17T00:40:08.154094+0800 WARNING core.collector:_parse_output:70 任务 check_router_a_datapath 的正则未匹配到任何内容。返回原始输出。
+2025-08-17T00:40:08.156594+0800 DEBUG core.database:save_result:49 成功为任务 check_router_a_datapath on Router_A 保存 0 条记录。
+2025-08-17T00:40:08.157392+0800 INFO core.scheduler:_execute_job:56 作业 check_router_a_datapath_Router_A (delay模式) 已安排下一次运行于 2025-08-17 00:41:08.156950
+2025-08-17T00:40:11.581741+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:11.582306+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:11.661765+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:11.663611+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:11.663793+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:11.737036+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:16.581709+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:16.582260+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:16.665237+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:16.667072+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:16.667246+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:16.738106+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:21.580477+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:21.580803+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:21.659257+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:21.661030+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:21.661250+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:21.735987+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:26.581181+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:26.581554+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:26.725471+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:26.727243+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:26.727416+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:26.800168+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:31.581903+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:31.582493+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:31.664996+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:31.666727+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:31.666900+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:31.743473+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:36.581507+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:36.581943+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:36.660391+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:36.662226+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:36.662397+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:36.734956+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:41.581701+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:41.582264+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:41.670619+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:41.672486+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:41.672682+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:41.746544+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:46.581065+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:46.581410+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:46.731273+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:46.733094+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:46.733269+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:46.844364+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:51.581273+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:51.581520+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:51.658412+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:51.660128+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:51.660299+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:51.736403+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:56.580791+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:40:56.581303+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:40:56.659628+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:40:56.661342+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:40:56.661508+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:40:56.734103+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:00.573974+0800 INFO core.scheduler:_execute_job:23 开始执行作业: run_router_a_tech_support_Router_A
+2025-08-17T00:41:00.574449+0800 INFO core.collector:_run_ssh_task:15 [SSH] 开始执行任务 run_router_a_tech_support on Router_A (192.168.1.100) - Command: show tech-support
+2025-08-17T00:41:01.580867+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:01.581248+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:01.659154+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:01.661010+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:01.661180+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:01.737508+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:06.580748+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:06.581122+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:06.657743+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:06.659623+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:06.659789+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:06.737489+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:08.121129+0800 ERROR core.collector:_run_ssh_task:29 [SSH] 任务 run_router_a_tech_support on Router_A 执行失败: [Errno 51] Connect call failed ('192.168.1.100', 22)
+2025-08-17T00:41:08.122490+0800 INFO core.scheduler:_execute_job:41 作业 run_router_a_tech_support_Router_A 的结果已保存到 outfile/run_router_a_tech_support_Router_A_20250817004108.log
+2025-08-17T00:41:08.123139+0800 INFO core.scheduler:_execute_job:56 作业 run_router_a_tech_support_Router_A (delay模式) 已安排下一次运行于 2025-08-17 00:43:08.122822
+2025-08-17T00:41:08.158388+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_router_a_datapath_Router_A
+2025-08-17T00:41:08.158873+0800 INFO core.collector:_run_ssh_task:15 [SSH] 开始执行任务 check_router_a_datapath on Router_A (192.168.1.100) - Command: show datapath network ingress
+2025-08-17T00:41:11.581659+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:11.582031+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:11.662044+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:11.663918+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:11.664087+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:11.734273+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:15.737304+0800 ERROR core.collector:_run_ssh_task:29 [SSH] 任务 check_router_a_datapath on Router_A 执行失败: [Errno 51] Connect call failed ('192.168.1.100', 22)
+2025-08-17T00:41:15.738006+0800 WARNING core.collector:_parse_output:70 任务 check_router_a_datapath 的正则未匹配到任何内容。返回原始输出。
+2025-08-17T00:41:15.741639+0800 DEBUG core.database:save_result:49 成功为任务 check_router_a_datapath on Router_A 保存 0 条记录。
+2025-08-17T00:41:15.742274+0800 INFO core.scheduler:_execute_job:56 作业 check_router_a_datapath_Router_A (delay模式) 已安排下一次运行于 2025-08-17 00:42:15.741978
+2025-08-17T00:41:16.581323+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:16.581858+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:16.659984+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:16.661831+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:16.662004+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:16.732518+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:21.581120+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:21.581485+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:21.660723+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:21.662643+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:21.662820+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:21.738416+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:26.581281+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:26.581783+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:26.670778+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:26.672590+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:26.672756+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:26.747904+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:31.580742+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:31.581205+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:31.660057+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:31.661902+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:31.662078+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:31.736597+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:36.581753+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:36.582303+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:36.664422+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:36.666199+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:36.666367+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:36.734321+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:41.581592+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:41.582139+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:41.661843+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:41.663813+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:41.663983+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:41.735139+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:46.581351+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:46.581553+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:46.670156+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:46.672032+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:46.672211+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:46.750064+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:51.581116+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:51.581663+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:51.663149+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:51.665018+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:51.665195+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:51.737596+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:56.580843+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:41:56.581235+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:41:56.659545+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:41:56.662132+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:41:56.662308+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:41:56.734841+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:01.580476+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:42:01.580687+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:42:01.649657+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:01.651245+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:42:01.651384+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:42:01.721626+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:06.581086+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:42:06.581638+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:42:06.663440+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:06.665224+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:42:06.665415+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:42:06.746138+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:11.581767+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_cpu_usage_Fortinet_60
+2025-08-17T00:42:11.582317+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_cpu_usage on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.4.2.1.2
+2025-08-17T00:42:11.662370+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_cpu_usage on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:11.664139+0800 INFO core.scheduler:_execute_job:23 开始执行作业: check_fortinet_session_count_Fortinet_60
+2025-08-17T00:42:11.664311+0800 INFO core.collector:_run_snmp_task:35 [SNMP] 开始执行任务 check_fortinet_session_count on Fortinet_60 (192.168.2.1) - OID: 1.3.6.1.4.1.12356.101.4.1.8.0
+2025-08-17T00:42:11.734682+0800 ERROR core.collector:_run_snmp_task:57 [SNMP] 任务 check_fortinet_session_count on Fortinet_60 执行失败: AbstractTransportTarget.__init__() got multiple values for argument 'timeout'
+2025-08-17T00:42:13.882749+0800 INFO core.scheduler:stop:97 关闭调度器...
+2025-08-17T00:42:13.883277+0800 INFO __main__:main:87 Hwatch 应用已关闭。
+2025-08-17T00:42:13.885267+0800 INFO __main__:<module>:93 收到退出信号，程序正在关闭...
