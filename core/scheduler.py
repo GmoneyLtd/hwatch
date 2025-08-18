@@ -35,8 +35,8 @@ class TaskScheduler:
         elif task.storage == 'file':
             outfile_dir = "outfile"
             os.makedirs(outfile_dir, exist_ok=True)
-            # 使用任务别名作为文件名，追加模式
-            file_path = os.path.join(outfile_dir, f"{task.alias}.log")
+            # 使用任务别名和设备名的组合作为文件名，追加模式
+            file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
             
             # 准备写入内容，包含时间戳和任务信息
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

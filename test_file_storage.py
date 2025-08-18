@@ -40,7 +40,7 @@ def test_file_storage():
     # 模拟存储逻辑
     outfile_dir = "outfile"
     os.makedirs(outfile_dir, exist_ok=True)
-    file_path = os.path.join(outfile_dir, f"{task.alias}.log")
+    file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
     
     for i, result in enumerate(results, 1):
         print(f"\n第 {i} 次执行:")
