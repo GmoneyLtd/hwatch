@@ -36,7 +36,7 @@ tasks:
   type: snmpwalk
 - alias: run_router_a_tech_support
   command: show tech-support
-  enabled: true
+  enabled: false
   protocol: ssh
   schedule:
     frequency: 0
@@ -47,7 +47,7 @@ tasks:
   - Router_A
 - alias: get_router_a_version
   command: show version
-  enabled: true
+  enabled: false
   protocol: ssh
   schedule:
     frequency: 1
@@ -56,7 +56,7 @@ tasks:
   - Router_A
 - alias: clear_router_a_counters
   command: clear counters
-  enabled: true
+  enabled: false
   protocol: ssh
   schedule:
     frequency: 1
@@ -79,7 +79,7 @@ tasks:
   storage: sqlite
   targets:
   - Router_A
-- alias: check_fortinet_session_count
+- alias: fgSysSesCount
   enabled: true
   oid: 1.3.6.1.4.1.12356.101.4.1.8.0
   protocol: snmp
