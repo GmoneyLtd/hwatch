@@ -11,7 +11,7 @@ import time
 from core.config_loader import TaskConfig, DeviceConfig
 
 # SSH连接池字典，键为 (task_alias, device_name) 元组，值为连接对象和最后使用时间
-_ssh_connection_pools: Dict[tuple, Dict[str, Any]] = {}
+_ssh_connection_pools: Dict[tuple[str, str], Dict[str, Any]] = {}
 
 async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncssh.SSHClientConnection:
     """从连接池获取SSH连接，如果不存在或已断开则创建新连接"""
@@ -38,15 +38,23 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
     logger.info(f"[SSH] 建立新连接: {task.alias} on {device.name}")
     
     last_exception = None
-    for attempt in range(conn_details.retry + 1):  # retry+1 次尝试（1次初始尝试 + retry次重试）
+    # 确保conn_details不为None
+    retry = conn_details.retry if conn_details else 3
+    for attempt in range(retry + 1):  # retry+1 次尝试（1次初始尝试 + retry次重试）
         try:
+            # 确保conn_details不为None
+            port = conn_details.port if conn_details else 22
+            username = conn_details.username if conn_details else None
+            password = conn_details.password if conn_details else None
+            timeout = conn_details.timeout if conn_details else 10
+            
             conn = await asyncssh.connect(
                 device.ip,
-                port=conn_details.port,
-                username=conn_details.username,
-                password=conn_details.password,
+                port=port,
+                username=username,
+                password=password,
                 known_hosts=None,  # 在生产中应考虑更安全的主机密钥验证
-                connect_timeout=conn_details.timeout
+                connect_timeout=timeout
             )
             
             # 将连接添加到连接池
@@ -64,7 +72,9 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
             
         except Exception as e:
             last_exception = e
-            if attempt < conn_details.retry:
+            # 确保conn_details不为None
+            retry = conn_details.retry if conn_details else 3
+            if attempt < retry:
                 wait_time = 2 ** attempt  # 指数退避
                 logger.warning(f"[SSH] 连接 {task.alias} on {device.name} 第 {attempt + 1} 次尝试失败: {e}. 等待 {wait_time} 秒后重试...")
                 await asyncio.sleep(wait_time)
@@ -72,7 +82,10 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
                 logger.error(f"[SSH] 连接 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然失败")
     
     # 如果所有尝试都失败了，抛出最后一个异常
-    raise last_exception
+    if last_exception:
+        raise last_exception
+    else:
+        raise Exception("连接失败，但没有具体的异常信息")
 
 async def _cleanup_ssh_connections():
     """清理超时的SSH连接（超过10分钟未使用）"""
@@ -98,26 +111,36 @@ async def _cleanup_ssh_connections():
 async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
     """执行单个SSH采集任务。"""
     conn_details = device.connection.ssh
-    logger.info(f"[SSH] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - Command: {task.command}")
+    # 获取命令，如果是列表则取第一个命令
+    command = task.command[0] if isinstance(task.command, list) and task.command else ""
+    logger.info(f"[SSH] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - Command: {command}")
     try:
         # 获取SSH连接（从连接池或新建）
         conn = await _get_ssh_connection(task, device)
         
         # 执行命令（带重试机制）
         last_exception = None
-        for attempt in range(conn_details.retry + 1):
+        retry = conn_details.retry if conn_details else 3
+        for attempt in range(retry + 1):
             try:
+                # 获取命令，如果是列表则取第一个命令
+                command = task.command[0] if isinstance(task.command, list) and task.command else ""
+                timeout = conn_details.timeout if conn_details else 10
                 result = await asyncio.wait_for(
-                    conn.run(task.command, check=True),
-                    timeout=conn_details.timeout
+                    conn.run(command, check=True),
+                    timeout=timeout
                 )
                 if attempt > 0:
                     logger.info(f"[SSH] 命令 {task.alias} on {device.name} 在第 {attempt + 1} 次尝试后成功执行")
                 logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name}")
-                return result.stdout
+                return result.stdout or ""
             except asyncio.TimeoutError:
-                last_exception = Exception(f"命令执行超时 ({conn_details.timeout} 秒)")
-                if attempt < conn_details.retry:
+                # 确保conn_details不为None
+                timeout = conn_details.timeout if conn_details else 10
+                retry = conn_details.retry if conn_details else 3
+                
+                last_exception = Exception(f"命令执行超时 ({timeout} 秒)")
+                if attempt < retry:
                     wait_time = 2 ** attempt
                     logger.warning(f"[SSH] 命令 {task.alias} on {device.name} 第 {attempt + 1} 次执行超时. 等待 {wait_time} 秒后重试...")
                     await asyncio.sleep(wait_time)
@@ -125,7 +148,9 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
                     logger.error(f"[SSH] 命令 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然超时")
             except Exception as e:
                 last_exception = e
-                if attempt < conn_details.retry:
+                # 确保conn_details不为None
+                retry = conn_details.retry if conn_details else 3
+                if attempt < retry:
                     wait_time = 2 ** attempt
                     logger.warning(f"[SSH] 命令 {task.alias} on {device.name} 第 {attempt + 1} 次执行失败: {e}. 等待 {wait_time} 秒后重试...")
                     await asyncio.sleep(wait_time)
@@ -133,7 +158,10 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
                     logger.error(f"[SSH] 命令 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然失败: {e}")
         
         # 如果所有尝试都失败了，抛出最后一个异常
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        else:
+            raise Exception("命令执行失败，但没有具体的异常信息")
         
     except Exception as e:
         logger.error(f"[SSH] 任务 {task.alias} on {device.name} 执行失败: {e}")
@@ -153,16 +181,22 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
     
     snmp_engine = SnmpEngine()
     try:
+        # 确保conn_details不为None
+        port = conn_details.port if conn_details else 161
+        timeout = conn_details.timeout if conn_details else 10
+        retry = conn_details.retry if conn_details else 3
+        community = conn_details.community if conn_details else "public"
+        
         # 修复第一个错误：正确传递参数给UdpTransportTarget
         transport_target = await UdpTransportTarget.create(
-            (device.ip, conn_details.port), 
-            timeout=conn_details.timeout, 
-            retries=conn_details.retry
+            (device.ip, port), 
+            timeout=timeout, 
+            retries=retry
         )
         
         error_indication, error_status, error_index, var_binds = await get_cmd(
             snmp_engine,
-            CommunityData(conn_details.community, mpModel=0), # v1
+            CommunityData(community, mpModel=0), # v1
             transport_target,
             ContextData(),
             ObjectType(ObjectIdentity(task.oid))
@@ -186,26 +220,53 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
             snmp_engine.transportDispatcher.closeDispatcher()
 
 
-def _parse_output(output: str, task: TaskConfig) -> Dict[str, Any]:
-    """使用正则表达式解析输出。"""
-    if not task.parse or not task.parse.regex:
+def _parse_output(output: str, task: TaskConfig) -> Dict[str, Any] | None:
+    """解析输出结果。返回None表示不应该存储此结果。"""
+    # 检查输出是否为错误
+    if output.startswith("ERROR:"):
+        logger.warning(f"任务 {task.alias} 执行出错，不存储结果: {output}")
+        return None
+    
+    # 如果没有标签，直接返回原始输出
+    if not task.labels:
         return {"raw_output": output}
-
+    
+    # 如果parse为None，意味着不需要正则匹配，直接将结果与labels匹配
+    if not task.parse or not task.parse.regex:
+        # 如果只有一个标签，直接将整个输出作为该标签的值
+        if len(task.labels) == 1:
+            return {task.labels[0]: output.strip()}
+        
+        # 如果有多个标签，尝试按行分割输出
+        lines = [line.strip() for line in output.strip().split('\n') if line.strip()]
+        result = {}
+        
+        # 将每行结果与对应的标签匹配
+        for i, label in enumerate(task.labels):
+            if i < len(lines):
+                result[label] = lines[i]
+            else:
+                result[label] = ""  # 如果行数不够，设为空字符串
+                
+        return result
+    
+    # 使用正则表达式解析输出
     match = re.search(task.parse.regex, output)
     print(f"-"*50)
     print(output)
     print(task.parse.regex)
     print(f"-"*50)
     if not match:
-        logger.warning(f"任务 {task.alias} 的正则未匹配到任何内容。返回原始输出。")
-        return {"raw_output": output}
+        logger.warning(f"任务 {task.alias} 的正则未匹配到任何内容，不存储结果。")
+        return None  # 匹配失败时返回None，表示不存储
 
     groups = match.groups()
-    if len(groups) != len(task.parse.labels):
-        logger.warning(f"任务 {task.alias} 的正则捕获组数量与标签数量不匹配。")
-        return {"raw_output": output}
+    
+    if len(groups) != len(task.labels):
+        logger.warning(f"任务 {task.alias} 的正则捕获组数量与标签数量不匹配，不存储结果。")
+        return None  # 匹配失败时返回None，表示不存储
 
-    return dict(zip(task.parse.labels, groups))
+    return dict(zip(task.labels, groups))
 
 
 async def run_task(task: TaskConfig, device: DeviceConfig) -> Optional[Dict[str, Any]]:
@@ -229,3 +290,4 @@ async def run_task(task: TaskConfig, device: DeviceConfig) -> Optional[Dict[str,
 
     # 将原始输出也加入结果，便于文件存储
     parsed_results = _parse_output(raw_output, task)
+    return parsed_results

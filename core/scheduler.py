@@ -26,7 +26,7 @@ class TaskScheduler:
         results = await run_task(task, device)
 
         if results is None:
-            logger.warning(f"作业 {job_id} 未返回结果 (可能被禁用或执行失败)。")
+            logger.warning(f"作业 {job_id} 未返回结果 (可能被禁用、执行失败或匹配失败)。")
             return
 
         # 根据存储策略处理结果
@@ -35,10 +35,40 @@ class TaskScheduler:
         elif task.storage == 'file':
             outfile_dir = "outfile"
             os.makedirs(outfile_dir, exist_ok=True)
-            file_path = os.path.join(outfile_dir, f"{job_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.log")
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(results.get("raw_output", ""))
-            logger.info(f"作业 {job_id} 的结果已保存到 {file_path}")
+            # 使用任务别名作为文件名，追加模式
+            file_path = os.path.join(outfile_dir, f"{task.alias}.log")
+            
+            # 准备写入内容，包含时间戳和任务信息
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            content_lines = [
+                f"=== {timestamp} ===",
+                f"任务: {task.alias}",
+                f"设备: {device.name} ({device.ip})",
+                f"协议: {task.protocol}",
+            ]
+            
+            # 添加具体的任务参数
+            if task.protocol == 'ssh' and task.command:
+                content_lines.append(f"命令: {task.command[0]}")
+            elif task.protocol == 'snmp' and task.oid:
+                content_lines.append(f"OID: {task.oid}")
+            
+            content_lines.append("结果:")
+            
+            # 添加结果内容
+            if "raw_output" in results:
+                content_lines.append(results["raw_output"])
+            else:
+                # 如果有解析后的结果，也显示
+                for key, value in results.items():
+                    content_lines.append(f"  {key}: {value}")
+            
+            content_lines.append("")  # 空行分隔
+            
+            # 追加写入文件
+            with open(file_path, 'a', encoding='utf-8') as f:
+                f.write('\n'.join(content_lines) + '\n')
+            logger.info(f"作业 {job_id} 的结果已追加到 {file_path}")
         
         # 处理执行频率和 'delay' 模式的重调度
         self.job_counts[job_id] = self.job_counts.get(job_id, 0) + 1
@@ -50,7 +80,7 @@ class TaskScheduler:
             return
 
         # 如果是 delay 模式，需要在这里手动安排下一次执行
-        if schedule.mode == 'delay':
+        if schedule.mode == 'delay' and schedule.seconds is not None:
             next_run_time = datetime.now() + timedelta(seconds=schedule.seconds)
             self.scheduler.add_job(self._execute_job, 'date', run_date=next_run_time, args=[task, device], id=f"{job_id}_adhoc_{self.job_counts[job_id]}")
             logger.info(f"作业 {job_id} (delay模式) 已安排下一次运行于 {next_run_time}")
@@ -81,7 +111,7 @@ class TaskScheduler:
                     continue
 
                 # 对于循环任务
-                if schedule.mode == 'interval':
+                if schedule.mode == 'interval' and schedule.seconds is not None:
                     self.scheduler.add_job(self._execute_job, IntervalTrigger(seconds=schedule.seconds), args=[task, device], id=job_id)
                     logger.info(f"已安排作业 {job_id} (interval模式, 每 {schedule.seconds} 秒)。")
                 elif schedule.mode == 'delay':
@@ -122,7 +152,7 @@ class TaskScheduler:
         if schedule.frequency == 1:
             self.scheduler.add_job(self._execute_job, 'date', run_date=datetime.now() + timedelta(seconds=1), args=[task, device], id=job_id)
             logger.info(f"已安排作业 {job_id} (仅执行一次)。")
-        elif schedule.mode == 'interval':
+        elif schedule.mode == 'interval' and schedule.seconds is not None:
             self.scheduler.add_job(self._execute_job, IntervalTrigger(seconds=schedule.seconds), args=[task, device], id=job_id)
             logger.info(f"已安排作业 {job_id} (interval模式, 每 {schedule.seconds} 秒)。")
         elif schedule.mode == 'delay':

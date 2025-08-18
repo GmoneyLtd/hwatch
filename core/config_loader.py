@@ -14,7 +14,6 @@ class ScheduleConfig(BaseModel):
 
 class ParseConfig(BaseModel):
     regex: str
-    labels: list[str]
 
 class TaskConfig(BaseModel):
     alias: str
@@ -23,9 +22,10 @@ class TaskConfig(BaseModel):
     protocol: str
     type: str | None = None
     oid: str | None = None
-    command: str | None = None
+    command: list[str] | None = None
     schedule: ScheduleConfig
     parse: ParseConfig | None = None
+    labels: list[str] | None = None
     storage: str | None = 'sqlite'
 
 class ConnectionDetails(BaseModel):

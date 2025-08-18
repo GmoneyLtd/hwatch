@@ -30,12 +30,13 @@ tasks:
     frequency: 0
     mode: interval
     seconds: 5
-  storage: file
+  storage: sqlite
   targets:
   - Fortinet_60
   type: snmpwalk
 - alias: run_router_a_tech_support
-  command: show tech-support
+  command: 
+  - show tech-support
   enabled: false
   protocol: ssh
   schedule:
@@ -46,7 +47,8 @@ tasks:
   targets:
   - Router_A
 - alias: get_router_a_version
-  command: show version
+  command: 
+  - show version
   enabled: false
   protocol: ssh
   schedule:
@@ -55,7 +57,8 @@ tasks:
   targets:
   - Router_A
 - alias: clear_router_a_counters
-  command: clear counters
+  command: 
+  - clear counters
   enabled: false
   protocol: ssh
   schedule:
@@ -64,12 +67,13 @@ tasks:
   targets:
   - Router_A
 - alias: check_router_a_datapath
-  command: show datapath network ingress
+  command: 
+  - show datapath network ingress
   enabled: false
+  labels:
+  - queue_empty_count
+  - queue_empty_recovery
   parse:
-    labels:
-    - queue_empty_count
-    - queue_empty_recovery
     regex: \|\s*G\s*\|\s*\[000\]\s*\|\s*Current Entries\s+(\d+)
   protocol: ssh
   schedule:
@@ -87,11 +91,9 @@ tasks:
     frequency: 0
     mode: interval
     seconds: 5
-  parse:
-    labels:
-    - fgSysSesCount
-    regex: Gauge32:\s*(\d+)
-  storage: sqlite
+  labels:
+  - fgSysSesCount
+  storage: file
   targets:
   - Fortinet_60
   type: snmpget
