@@ -15,3 +15,4 @@ log/*
 *.db-shm
 # Environment variables
 .env.local
+.codebuddy/*
