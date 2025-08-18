@@ -38,7 +38,7 @@ def setup_logging(level="INFO", rotation="10 MB", retention="7 days"):
     )
 
     # 按模块分离日志文件
-    log_modules = ["collector", "scheduler", "web_server", "database", "watch"]
+    log_modules = ["collector", "scheduler", "web_server", "database", "watch", "config_loader"]
     for module_name in log_modules:
         logger.add(
             f"log/{module_name}.log",

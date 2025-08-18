@@ -17,3 +17,40 @@ dependencies = [
     "uvicorn[standard]>=0.35.0",
     "watchdog>=6.0.0",
 ]
+
+
+[tool.ruff]
+# 代码风格与格式
+line-length = 120  # 放宽行长度限制（默认88）
+indent-width = 4   # 4空格缩进
+target-version = "py313"  # 根据项目Python版本调整
+
+[tool.ruff.lint]
+# 核心规则集（覆盖PEP8、逻辑错误、导入排序等）
+select = [
+    "E",   # pycodestyle错误（PEP8基础规范）
+    "W",   # pycodestyle警告（格式细节）
+    "F",   # Pyflakes（未使用变量/导入等逻辑问题）
+    "I",   # isort（导入排序与分组）
+    "B",   # flake8-bugbear（潜在错误与不良实践）
+    "UP",  # pyupgrade（Python语法升级建议）
+    "C4",  # flake8-comprehensions（推导式优化）
+    "RUF", # Ruff专属规则（如未使用的NOQA注释）
+]
+
+# 忽略的规则（根据项目需求调整）
+ignore = [
+    "E501",  # 允许超出行长度（由格式化工具处理）
+    "F401",  # 允许未使用的导入（部分场景需要保留）
+    "ANN401", # 忽略 Any 类型注解的警告
+]
+
+# 自动修复配置
+fixable = ["ALL"]  # 允许所有规则自动修复
+unfixable = []     # 例外规则（如需要人工审查的复杂问题）
+
+[tool.ruff.format]
+# 格式化风格（兼容Black）
+quote-style = "double"  # 字符串引号风格
+indent-style = "space"  # 空格缩进
+skip-magic-trailing-comma = false  # 保留末尾逗号

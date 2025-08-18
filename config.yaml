@@ -87,6 +87,10 @@ tasks:
     frequency: 0
     mode: interval
     seconds: 5
+  parse:
+    labels:
+    - fgSysSesCount
+    regex: Gauge32:\s*(\d+)
   storage: sqlite
   targets:
   - Fortinet_60
