@@ -16,3 +16,6 @@ log/*
 # Environment variables
 .env.local
 .codebuddy/*
+.DS_Store*
+.vscode/*
+.idea/*
