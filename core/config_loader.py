@@ -74,11 +74,13 @@ def load_config(config_path: str) -> AppConfig | None:
         logger.success("配置加载并验证成功!")
         logger.debug(f"加载了 {len(config.devices)} 个设备和 {len(config.tasks)} 个任务。")
         
-        # 加载具体设备和任务的debug日志
+        # 加载具体设备和任务的
+        print(f"-"*50)
         for device in config.devices:
             for task in config.tasks:
-                logger.debug(f"Decice: {device.name} - Task: {task.alias}:\n{str(task)}")
-
+                print(f"Decice: {device.name} - Task: {task.alias}:\n{str(task)}")
+        print(f"-"*50)
+        
         return config
 
     except FileNotFoundError:

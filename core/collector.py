@@ -192,6 +192,10 @@ def _parse_output(output: str, task: TaskConfig) -> Dict[str, Any]:
         return {"raw_output": output}
 
     match = re.search(task.parse.regex, output)
+    print(f"-"*50)
+    print(output)
+    print(task.parse.regex)
+    print(f"-"*50)
     if not match:
         logger.warning(f"任务 {task.alias} 的正则未匹配到任何内容。返回原始输出。")
         return {"raw_output": output}
