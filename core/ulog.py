@@ -45,7 +45,7 @@ def setup_logging(level: str = "INFO", rotation: str = "10 MB", retention: str =
         _ = logger.add(
             f"log/{module_name}.log",
             level="DEBUG",
-            filter=lambda record, module=module_name: record["name"] == f"core.{module}" or record["name"].startswith(f"core.{module}."),
+            filter=lambda record, module=module_name: record["name"] is not None and (record["name"] == f"core.{module}" or record["name"].startswith(f"core.{module}.")),
             rotation=rotation,
             retention=retention,
             enqueue=True,
