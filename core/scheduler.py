@@ -41,19 +41,19 @@ class TaskScheduler:
             # 准备写入内容，包含时间戳和任务信息
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             content_lines = [
-                f"=== {timestamp} ===",
-                f"任务: {task.alias}",
-                f"设备: {device.name} ({device.ip})",
-                f"协议: {task.protocol}",
+                f"============ {timestamp} ============",
+                f"Task: {task.alias}",
+                f"Device: {device.name} ({device.ip})",
+                f"Protocol: {task.protocol}",
             ]
             
             # 添加具体的任务参数
             if task.protocol == 'ssh' and task.command:
-                content_lines.append(f"命令: {task.command[0]}")
+                content_lines.append(f"Commadn: {task.command[0]}")
             elif task.protocol == 'snmp' and task.oid:
                 content_lines.append(f"OID: {task.oid}")
             
-            content_lines.append("结果:")
+            content_lines.append("Results:\n")
             
             # 添加结果内容
             if "raw_output" in results:
@@ -61,7 +61,7 @@ class TaskScheduler:
             else:
                 # 如果有解析后的结果，也显示
                 for key, value in results.items():
-                    content_lines.append(f"  {key}: {value}")
+                    content_lines.append(f"{key}: {value}")
             
             content_lines.append("")  # 空行分隔
             
