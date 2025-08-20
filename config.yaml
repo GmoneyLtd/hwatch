@@ -93,7 +93,7 @@ tasks:
     seconds: 5
   labels:
   - fgSysSesCount
-  storage: sqlite
+  storage: file
   targets:
   - Fortinet_60
   type: snmpget

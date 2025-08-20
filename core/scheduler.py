@@ -47,6 +47,7 @@ class TaskScheduler:
                 f"Task: {task.alias}",
                 f"Device: {device.name} ({device.ip})",
                 f"Protocol: {task.protocol}",
+                f"Type: {task.type}",
             ]
             
             # 添加具体的任务参数
