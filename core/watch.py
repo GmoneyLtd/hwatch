@@ -7,12 +7,12 @@ from collections.abc import Awaitable, Callable
 from typing import override
 
 from loguru import logger
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 
 class AsyncConfigChangeHandler(FileSystemEventHandler):
-    """异步文件系统事件处理器，用于监控配置文件更改."""
+    """异步文件系统事件处理器, 用于监控配置文件更改."""
     
     config_file: str
     callback: Callable[[], Awaitable[None]]
@@ -70,10 +70,7 @@ class AsyncConfigChangeHandler(FileSystemEventHandler):
             logger.error(f"调度回调函数时发生错误: {e}")
 
 
-def start_watching(
-    config_file: str, 
-    callback: Callable[[], Awaitable[None]]
-):
+def start_watching(config_file: str, callback: Callable[[], Awaitable[None]]):
     """启动一个后台线程来监控配置文件.
 
     Args:
@@ -90,10 +87,7 @@ def start_watching(
         return None
 
 
-def _create_and_start_observer(
-    config_file: str, 
-    callback: Callable[[], Awaitable[None]]
-):
+def _create_and_start_observer(config_file: str, callback: Callable[[], Awaitable[None]]):
     """创建并启动文件观察器.
 
     Args:
@@ -127,7 +121,7 @@ def _validate_watch_path(path: str) -> bool:
         如果路径有效则返回True, 否则返回False
     """
     if not os.path.exists(path):
-        logger.warning(f"监控目录 {path} 不存在，无法启动监控。")
+        logger.warning(f"监控目录 {path} 不存在, 无法启动监控。")
         return False
     return True
 

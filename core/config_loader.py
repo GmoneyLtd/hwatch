@@ -6,14 +6,15 @@ from pydantic import BaseModel, ValidationError
 
 
 # --- 数据模型定义 ---
-
 class ScheduleConfig(BaseModel):
     frequency: int = 1
     mode: str | None = None
     seconds: int | None = None
 
+
 class ParseConfig(BaseModel):
     regex: str
+
 
 class TaskConfig(BaseModel):
     alias: str
@@ -28,6 +29,7 @@ class TaskConfig(BaseModel):
     labels: list[str] | None = None
     storage: str | None = 'sqlite'
 
+
 class ConnectionDetails(BaseModel):
     username: str | None = None
     password: str | None = None # 注意: 明文密码安全风险
@@ -36,21 +38,23 @@ class ConnectionDetails(BaseModel):
     retry: int = 3
     community: str | None = None
 
+
 class ConnectionConfig(BaseModel):
     ssh: ConnectionDetails | None = None
     snmp: ConnectionDetails | None = None
+
 
 class DeviceConfig(BaseModel):
     name: str
     ip: str
     connection: ConnectionConfig
 
+
 class AppConfig(BaseModel):
     devices: list[DeviceConfig]
     tasks: list[TaskConfig]
 
 # --- 加载函数 ---
-
 def load_config(config_path: str) -> AppConfig | None:
     """
     从指定路径加载、验证并解析YAML配置文件。
@@ -75,11 +79,11 @@ def load_config(config_path: str) -> AppConfig | None:
         logger.debug(f"加载了 {len(config.devices)} 个设备和 {len(config.tasks)} 个任务。")
         
         # 加载具体设备和任务的
-        print(f"-"*50)
+        print("-" * 50)
         for device in config.devices:
             for task in config.tasks:
                 print(f"Decice: {device.name} - Task: {task.alias}:\n{str(task)}")
-        print(f"-"*50)
+        print("-" * 50)
         
         return config
 
