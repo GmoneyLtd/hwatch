@@ -1,13 +1,14 @@
 
-import aiosqlite
 from datetime import datetime
+from typing import Any
+
+import aiosqlite
 from loguru import logger
-from typing import List, Dict, Any, Optional
 
 DB_FILE = "hwatch.db"
 
 async def init_db():
-    """初始化数据库，创建必要的表。"""
+    """初始化数据库, 创建必要的表。"""
     try:
         async with aiosqlite.connect(DB_FILE) as db:
             await db.execute("""
@@ -27,7 +28,7 @@ async def init_db():
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
 
-async def save_result(task_alias: str, device_name: str, results: Dict[str, Any]):
+async def save_result(task_alias: str, device_name: str, results: dict[str, Any]):
     """
     将任务结果保存到数据库。
 
@@ -50,7 +51,7 @@ async def save_result(task_alias: str, device_name: str, results: Dict[str, Any]
     except Exception as e:
         logger.error(f"保存任务结果到数据库失败 (任务: {task_alias}): {e}")
 
-async def get_chart_data(task_alias: str, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
+async def get_chart_data(task_alias: str, start_date: datetime, end_date: datetime) -> list[dict[str, Any]]:
     """
     查询用于图表展示的时间序列数据。
 
