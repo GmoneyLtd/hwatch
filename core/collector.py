@@ -13,6 +13,7 @@ from pysnmp.hlapi.asyncio import (
     SnmpEngine,
     UdpTransportTarget,
     get_cmd,
+    walk_cmd,
 )
 
 from core.config_loader import DeviceConfig, TaskConfig
@@ -194,7 +195,10 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
 async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
     """执行单个SNMP采集任务。"""
     conn_details = device.connection.snmp
-    logger.info(f"[SNMP] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - OID: {task.oid}")
+    snmp_type = getattr(task, "type", "snmpget")  # 默认为snmpget
+    logger.info(
+        f"[SNMP] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - OID: {task.oid} - Type: {snmp_type}"
+    )
 
     snmp_engine = SnmpEngine()
     try:
@@ -207,22 +211,50 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         # 修复第一个错误: 正确传递参数给UdpTransportTarget
         transport_target = await UdpTransportTarget.create((device.ip, port), timeout=timeout, retries=retry)
 
-        error_indication, error_status, error_index, var_binds = await get_cmd(
-            snmp_engine,
-            CommunityData(community, mpModel=0),  # v1
-            transport_target,
-            ContextData(),
-            ObjectType(ObjectIdentity(task.oid)),
-        )
+        if snmp_type == "snmpwalk":
+            # 执行SNMP Walk
+            results = []
+            async for error_indication, error_status, error_index, var_binds in walk_cmd(
+                snmp_engine,
+                CommunityData(community, mpModel=0),  # v1
+                transport_target,
+                ContextData(),
+                ObjectType(ObjectIdentity(task.oid)),
+                lexicographicMode=False,
+                ignoreNonIncreasingOid=False,
+            ):
+                if error_indication:
+                    raise RuntimeError(error_indication)
+                elif error_status:
+                    raise RuntimeError(
+                        f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
+                    )
 
-        if error_indication:
-            raise RuntimeError(error_indication)
-        elif error_status:
-            raise RuntimeError(
-                f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
+                for var_bind in var_binds:
+                    # 只获取数值部分, 与get_cmd保持一致
+                    value_str = var_bind[1].prettyPrint()
+                    results.append(value_str)
+
+            result = "\n".join(results)
+        else:
+            # 执行SNMP Get (默认行为)
+            error_indication, error_status, error_index, var_binds = await get_cmd(
+                snmp_engine,
+                CommunityData(community, mpModel=0),  # v1
+                transport_target,
+                ContextData(),
+                ObjectType(ObjectIdentity(task.oid)),
             )
 
-        result = var_binds[0][1].prettyPrint()
+            if error_indication:
+                raise RuntimeError(error_indication)
+            elif error_status:
+                raise RuntimeError(
+                    f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
+                )
+
+            result = var_binds[0][1].prettyPrint()
+
         logger.success(f"[SNMP] 成功完成任务 {task.alias} on {device.name}")
         return result
 
