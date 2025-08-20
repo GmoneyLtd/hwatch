@@ -35,7 +35,7 @@ tasks:
     frequency: 0
     mode: interval
     seconds: 5
-  storage: file
+  storage: sqlite
   targets:
   - Fortinet_60
   type: snmpwalk
