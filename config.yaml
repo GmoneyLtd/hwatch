@@ -22,15 +22,20 @@ devices:
   ip: 192.168.2.1
   name: Fortinet_60
 tasks:
-- alias: check_fortinet_cpu_usage
-  enabled: false
+- alias: fgProcessorUsage_per
+  enabled: true
   oid: 1.3.6.1.4.1.12356.101.4.4.2.1.2
   protocol: snmp
+  labels:
+    - fgProcessorUsage.1
+    - fgProcessorUsage.2
+    - fgProcessorUsage.3
+    - fgProcessorUsage.4
   schedule:
     frequency: 0
     mode: interval
     seconds: 5
-  storage: sqlite
+  storage: file
   targets:
   - Fortinet_60
   type: snmpwalk
