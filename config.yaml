@@ -21,6 +21,20 @@ devices:
       timeout: 2
   ip: 192.168.2.1
   name: Fortinet_60
+- connection:
+    snmp:
+      community: awatch
+      port: 161
+      retry: 0
+      timeout: 2
+    ssh:
+      username: admin
+      password: admin
+      port: 22
+      retry: 0
+      timeout: 2
+  ip: 192.168.2.11
+  name: AP-205
 tasks:
 - alias: fgProcessorUsage_per
   enabled: true
@@ -129,4 +143,5 @@ tasks:
   storage: file
   targets:
   - Fortinet_60
+  - AP-205
   type: snmpget
