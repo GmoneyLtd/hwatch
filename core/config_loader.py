@@ -68,13 +68,13 @@ def load_config(config_path: str) -> AppConfig | None:
     logger.info(f"开始从 {config_path} 加载配置...")
     try:
         with open(config_path, encoding='utf-8') as f:
-            data: dict[str, Any] | None = yaml.safe_load(f)  # pyright: ignore[reportExplicitAny, reportAny]
+            data: dict[str, Any] | None = yaml.safe_load(f)
 
         if not data:
             logger.error("配置文件为空或格式不正确。")
             return None
 
-        config = AppConfig(**data)  # pyright: ignore[reportAny]
+        config = AppConfig(**data)
         logger.success("配置加载并验证成功!")
         logger.debug(f"加载了 {len(config.devices)} 个设备和 {len(config.tasks)} 个任务。")
         
