@@ -313,6 +313,49 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
             snmp_engine.transportDispatcher.closeDispatcher()
 
 
+def _calculate_value(value: str, operation: str) -> float | None:
+    """执行数学运算。
+
+    Args:
+        value: 原始数值字符串
+        operation: 运算表达式, 格式如 "+10", "*2", "/100", "-5"
+
+    Returns:
+        计算后的数值, 如果计算失败返回None
+    """
+    try:
+        # 解析原始值
+        original_value = float(value)
+
+        # 解析运算符和操作数
+        if not operation or len(operation) < 2:
+            return original_value
+
+        operator = operation[0]
+        operand_str = operation[1:]
+        operand = float(operand_str)
+
+        # 执行运算
+        if operator == "+":
+            return original_value + operand
+        elif operator == "-":
+            return original_value - operand
+        elif operator == "*":
+            return original_value * operand
+        elif operator == "/":
+            if operand == 0:
+                logger.warning(f"除零错误: {value} / 0")
+                return None
+            return original_value / operand
+        else:
+            logger.warning(f"不支持的运算符: {operator}")
+            return None
+
+    except (ValueError, TypeError) as e:
+        logger.warning(f"数值计算失败: {value} {operation} - {e}")
+        return None
+
+
 def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     """解析输出结果。返回None表示不应该存储此结果。"""
     # 检查输出是否为错误
@@ -328,7 +371,17 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     if not task.parse or not task.parse.regex:
         # 如果只有一个标签, 直接将整个输出作为该标签的值
         if len(task.labels) == 1:
-            return {task.labels[0]: output.strip()}
+            raw_value = output.strip()
+
+            # 检查是否需要计算
+            if task.parse and task.parse.calculate and len(task.parse.calculate) > 0:
+                calculated_value = _calculate_value(raw_value, task.parse.calculate[0])
+                if calculated_value is None:
+                    logger.warning(f"任务 {task.alias} 计算失败, 不存储结果")
+                    return None
+                return {task.labels[0]: str(calculated_value)}
+
+            return {task.labels[0]: raw_value}
 
         # 如果有多个标签, 尝试按行分割输出
         lines = [line.strip() for line in output.strip().split("\n") if line.strip()]
@@ -337,7 +390,17 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
         # 将每行结果与对应的标签匹配
         for i, label in enumerate(task.labels):
             if i < len(lines):
-                result[label] = lines[i]
+                raw_value = lines[i]
+
+                # 检查是否需要计算
+                if task.parse and task.parse.calculate and i < len(task.parse.calculate) and task.parse.calculate[i]:
+                    calculated_value = _calculate_value(raw_value, task.parse.calculate[i])
+                    if calculated_value is None:
+                        logger.warning(f"任务 {task.alias} 标签 {label} 计算失败, 不存储结果")
+                        return None
+                    result[label] = str(calculated_value)
+                else:
+                    result[label] = raw_value
             else:
                 result[label] = ""  # 如果行数不够, 设为空字符串
 
@@ -359,7 +422,19 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
         logger.warning(f"任务 {task.alias} 的正则捕获组数量与标签数量不匹配, 不存储结果。")
         return None  # 匹配失败时返回None, 表示不存储
 
-    return dict(zip(task.labels, groups, strict=False))
+    result = {}
+    for i, (label, value) in enumerate(zip(task.labels, groups, strict=False)):
+        # 检查是否需要计算
+        if task.parse.calculate and i < len(task.parse.calculate) and task.parse.calculate[i]:
+            calculated_value = _calculate_value(value, task.parse.calculate[i])
+            if calculated_value is None:
+                logger.warning(f"任务 {task.alias} 标签 {label} 计算失败, 不存储结果")
+                return None
+            result[label] = str(calculated_value)
+        else:
+            result[label] = value
+
+    return result
 
 
 async def run_task(task: TaskConfig, device: DeviceConfig) -> dict[str, Any] | None:

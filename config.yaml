@@ -71,10 +71,13 @@ tasks:
     seconds: 120
   parse:
     regex: (?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)
+    calculate:
+    - "/1000000"  # BIOS_Version除以1000000
+    - "*10"       # Branch_Point乘以10
   labels:
   - BIOS_Version
   - Branch_Point
-  storage: sqlite
+  storage: file
   targets:
   - Fortinet_60
 - alias: get_router_a_version

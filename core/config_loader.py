@@ -14,6 +14,7 @@ class ScheduleConfig(BaseModel):
 
 class ParseConfig(BaseModel):
     regex: str
+    calculate: list[str] | None = None
 
 
 class TaskConfig(BaseModel):
@@ -27,12 +28,12 @@ class TaskConfig(BaseModel):
     schedule: ScheduleConfig
     parse: ParseConfig | None = None
     labels: list[str] | None = None
-    storage: str | None = 'sqlite'
+    storage: str | None = "sqlite"
 
 
 class ConnectionDetails(BaseModel):
     username: str | None = None
-    password: str | None = None # 注意: 明文密码安全风险
+    password: str | None = None  # 注意: 明文密码安全风险
     port: int
     timeout: int = 10
     retry: int = 3
@@ -54,6 +55,7 @@ class AppConfig(BaseModel):
     devices: list[DeviceConfig]
     tasks: list[TaskConfig]
 
+
 # --- 加载函数 ---
 def load_config(config_path: str) -> AppConfig | None:
     """
@@ -67,7 +69,7 @@ def load_config(config_path: str) -> AppConfig | None:
     """
     logger.info(f"开始从 {config_path} 加载配置...")
     try:
-        with open(config_path, encoding='utf-8') as f:
+        with open(config_path, encoding="utf-8") as f:
             data: dict[str, Any] | None = yaml.safe_load(f)
 
         if not data:
@@ -77,14 +79,14 @@ def load_config(config_path: str) -> AppConfig | None:
         config = AppConfig(**data)
         logger.success("配置加载并验证成功!")
         logger.debug(f"加载了 {len(config.devices)} 个设备和 {len(config.tasks)} 个任务。")
-        
+
         # 加载具体设备和任务的
         print("-" * 50)
         for device in config.devices:
             for task in config.tasks:
                 print(f"Decice: {device.name} - Task: {task.alias}:\n{str(task)}")
         print("-" * 50)
-        
+
         return config
 
     except FileNotFoundError:
@@ -118,7 +120,7 @@ def save_config(config: AppConfig, config_path: str) -> bool:
         config_dict = config.model_dump()
 
         # 保存到YAML文件
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(config_dict, f, default_flow_style=False, allow_unicode=True, indent=2)
 
         logger.success("配置保存成功!")
