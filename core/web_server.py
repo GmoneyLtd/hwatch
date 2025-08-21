@@ -334,10 +334,10 @@ async def get_chart_data_api(
 
                 # 生成标签
                 if len(device_keys) == 1:
-                    label = f"{task_alias} - {series_info['device']}"
+                    label = f"{series_info['device']}"
                 else:
                     key_display = _simplify_oid_key(series_info["key"])
-                    label = f"{task_alias} - {series_info['device']} - {key_display}"
+                    label = f"{series_info['device']} - {key_display}"
 
                 # 生成颜色
                 border_color = _generate_chart_color(color_index)
