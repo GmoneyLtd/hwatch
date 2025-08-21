@@ -1,4 +1,5 @@
 import os
+import secrets
 import time
 from datetime import datetime, timedelta
 from typing import Any
@@ -94,15 +95,54 @@ app_state: dict[str, Any] = {
 
 # --- 认证 ---
 
-# 简单的用户数据库
-FAKE_USERS_DB = {"admin": {"password": "admin"}}
+# 简单的用户数据库 - 从环境变量获取, 如果不存在则使用默认值
+WEB_USERNAME = os.getenv("WEB_USERNAME", "admin")
+WEB_PASSWORD = os.getenv("WEB_PASSWORD", "123456")
+FAKE_USERS_DB = {WEB_USERNAME: {"password": WEB_PASSWORD}}
+
+# 会话存储 - 存储活跃的会话token和过期时间
+ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
+
+# 会话有效期（8小时）
+SESSION_EXPIRE_HOURS = 8
+
+
+def cleanup_expired_sessions():
+    """清理过期的会话"""
+    current_time = datetime.now()
+    expired_tokens = []
+
+    for token, session_data in ACTIVE_SESSIONS.items():
+        if current_time > session_data["expires_at"]:
+            expired_tokens.append(token)
+
+    for token in expired_tokens:
+        del ACTIVE_SESSIONS[token]
+        logger.debug(f"清理过期会话: {token[:8]}...")
 
 
 def get_current_user(request: Request):
+    """获取当前用户，验证会话有效性"""
+    cleanup_expired_sessions()  # 清理过期会话
+
     token = request.cookies.get("session_token")
-    if token and token in FAKE_USERS_DB:  # 在实际应用中,这里应该是验证token的有效性
-        return FAKE_USERS_DB[token]
-    return None
+    if not token:
+        return None
+
+    session_data = ACTIVE_SESSIONS.get(token)
+    if not session_data:
+        return None
+
+    # 检查会话是否过期
+    if datetime.now() > session_data["expires_at"]:
+        del ACTIVE_SESSIONS[token]
+        logger.info(f"会话已过期: {session_data['username']}")
+        return None
+
+    # 更新最后访问时间
+    session_data["last_access"] = datetime.now()
+
+    return {"username": session_data["username"]}
 
 
 # 创建依赖注入单例变量
@@ -130,18 +170,46 @@ async def handle_login(request: Request, username: str = Form(...), password: st
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
-    logger.info(f"用户登录成功: {username} (IP: {request.client.host})")
+    # 生成安全的会话token
+    session_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now() + timedelta(hours=SESSION_EXPIRE_HOURS)
+
+    # 存储会话信息
+    ACTIVE_SESSIONS[session_token] = {
+        "username": username,
+        "created_at": datetime.now(),
+        "expires_at": expires_at,
+        "last_access": datetime.now(),
+        "ip": request.client.host,
+    }
+
+    logger.info(f"用户登录成功: {username} (IP: {request.client.host}), 会话有效期至: {expires_at}")
+
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    # 在实际应用中,应使用安全的会话管理
-    response.set_cookie(key="session_token", value=username, httponly=True)
+    # 设置安全的会话cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,  # 防止XSS攻击
+        secure=False,  # 在生产环境中应设为True（需要HTTPS）
+        samesite="lax",  # 防止CSRF攻击
+        max_age=SESSION_EXPIRE_HOURS * 3600,  # 8小时后cookie过期
+    )
     return response
 
 
 @app.get("/logout")
 async def logout(request: Request):
-    user = await get_current_user(request)
+    user = get_current_user(request)
     username = "Unknown" if not user else user.get("username", "Unknown")
-    logger.info(f"用户登出: {username} (IP: {request.client.host})")
+
+    # 清理服务器端会话
+    token = request.cookies.get("session_token")
+    if token and token in ACTIVE_SESSIONS:
+        del ACTIVE_SESSIONS[token]
+        logger.info(f"用户登出: {username} (IP: {request.client.host}), 会话已清理")
+    else:
+        logger.info(f"用户登出: {username} (IP: {request.client.host})")
 
     response = RedirectResponse(url="/login")
     response.delete_cookie("session_token")
