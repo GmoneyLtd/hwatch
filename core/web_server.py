@@ -103,8 +103,8 @@ FAKE_USERS_DB = {WEB_USERNAME: {"password": WEB_PASSWORD}}
 # 会话存储 - 存储活跃的会话token和过期时间
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
 
-# 会话有效期（8小时）
-SESSION_EXPIRE_HOURS = 8
+# 会话有效期(2小时)
+SESSION_EXPIRE_HOURS = 2
 
 
 def cleanup_expired_sessions():
@@ -122,7 +122,7 @@ def cleanup_expired_sessions():
 
 
 def get_current_user(request: Request):
-    """获取当前用户，验证会话有效性"""
+    """获取当前用户, 验证会话有效性"""
     cleanup_expired_sessions()  # 清理过期会话
 
     token = request.cookies.get("session_token")
@@ -191,7 +191,7 @@ async def handle_login(request: Request, username: str = Form(...), password: st
         key="session_token",
         value=session_token,
         httponly=True,  # 防止XSS攻击
-        secure=False,  # 在生产环境中应设为True（需要HTTPS）
+        secure=False,  # 在生产环境中应设为True(需要HTTPS)
         samesite="lax",  # 防止CSRF攻击
         max_age=SESSION_EXPIRE_HOURS * 3600,  # 8小时后cookie过期
     )
