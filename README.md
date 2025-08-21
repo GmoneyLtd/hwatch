@@ -1,251 +1,420 @@
-# 📡 Hwatch - 轻量级运维采集平台
+# HWatch - 网络设备监控系统
 
-一个轻量级的网络设备信息采集与监控平台，支持通过 SSH 和 SNMP 协议并发执行任务。平台基于统一的异步引擎，具备精细化的任务调度、配置热更新、数据持久化以及一个功能丰富的 Web 控制面板。
+HWatch是一个基于Python的网络设备监控系统，支持通过SSH和SNMP协议采集设备数据，提供实时监控、数据存储和Web可视化界面。
 
----
+## 🚀 主要特性
 
-## 🎯 核心功能
+- **多协议支持**: SSH命令执行和SNMP数据采集
+- **灵活调度**: 支持间隔模式(interval)和延迟模式(delay)的任务调度
+- **数据解析**: 强大的正则表达式解析和数学运算功能
+- **多种存储**: SQLite数据库存储和文件存储
+- **实时监控**: Web界面实时图表展示
+- **连接池**: SSH连接复用，提高性能
+- **容错机制**: 完善的重试和错误处理
 
-- ✅ **精细化任务调度**: 每个任务均可独立配置执行策略，包括执行次数、调度模式(`interval`/`delay`)和间隔时间。
-- ✅ **配置热更新**: 监控 `config.yaml` 文件变化，使用 `watchdog` 实现配置的动态加载，无需重启服务。
-- ✅ **Web控制面板**: 
-    - **任务仪表盘**: 实时查看所有任务状态，并可在线启用或禁用任何任务。
-    - **在线配置编辑器**: 提供一个可读写的配置页面，允许在线修改 `config.yaml`，并在保存时自动进行 YAML 格式校验。
-    - **数据可视化**: 将采集到的数据以图表形式展示，便于趋势分析。
-    - **任务文件**: 特定任务输出文件，提供文件预览和下载功能。
-- ✅ **数据持久化**: 使用 `SQLite` 数据库存储所有采集结果。
-- ✅ **连接复用**: SSH 连接复用机制，减少连接建立开销，并发采用协程，提高数据处理效率。
-- ✅ **高性能**: 基于 **单进程异步模型**，Web服务、任务调度器、SSH/SNMP采集任务全部运行在同一个 asyncio 事件循环中，确保了极高的并发性能和较低的资源开销。
-- ✅ **灵活的数据解析**: 支持基于正则表达式的键值对和表格形式的数据解析。
-- ✅ **多种数据存储方式**: 支持 `sqlite` (数据库)、`file` (文件) 和 `null` (不存储) 三种方式。
+## 📋 系统要求
 
----
+- Python 3.11+
+- SQLite 3
+- 网络设备支持SSH/SNMP协议
 
-## 🧱 技术架构
+## 🛠️ 安装部署
 
-| 模块           | 技术栈                               | 说明                     |
-|----------------|--------------------------------------|--------------------------|
-| Web 框架       | uvicorn + FastAPI                   | 统一的异步 Web 框架与应用入口 |
-| 后台调度       | asyncio + apscheduler                | 异步并发任务执行         |
-| 配置管理       | YAML + Watchdog                      | 支持热更新和在线编辑     |
-| SSH 采集       | asyncssh                             | 异步 SSH 命令执行        |
-| SNMP 采集      | PySNMP (asyncio support)             | 异步 SNMP OID 查询       |
-| 数据存储       | aiosqlite                            | 异步本地数据库           |
-| 日志           | loguru                               | 程序及任务运行日志           |
-
----
-
-## 🚀 快速开始
-
-### 环境准备
-
-确保已安装 Python 3.7+ 和 `uv` 包管理工具。
-
-创建虚拟环境并安装依赖：
+### 1. 克隆项目
 ```bash
-uv sync --frozen --no-cache
+git clone <repository-url>
+cd hwatch
 ```
 
-### 启动服务
-
+### 2. 安装依赖
 ```bash
-# 运行并设置日志级别
-python app.py --level debug
+# 使用uv (推荐)
+uv sync
+
+# 或使用pip
+pip install -r requirements.txt
 ```
 
-### 访问平台
+### 3. 配置文件
+复制并编辑配置文件：
+```bash
+cp config_init.yaml config.yaml
+```
 
-打开浏览器并访问 `http://localhost:8080`，默认登录凭据为：
-- 用户名: `admin`
-- 密码: `admin`
+### 4. 启动应用
+```bash
+python app.py
+```
 
----
+访问 http://localhost:8080 查看Web界面。
 
-## ⚙️ 功能详解
+## ⚙️ 配置文件详解 (config.yaml)
 
-### 任务调度逻辑
+### 设备配置 (devices)
 
-每个任务的执行方式由其 `schedule` 块定义，包含三个核心字段：
-
-- `frequency` (执行次数):
-    - `0`: 无限循环执行。
-    - `1`: 仅执行一次。
-    - `n`: 总共执行 `n` 次。
-
-- `mode` (调度模式):
-    - `interval`: **固定间隔模式**。任务会严格按照 `seconds` 定义的间隔时间触发，类似于 `cron`。适合需要精确、周期性采样的数据（如 SNMP 轮询）。
-    - `delay`: **完成后延迟模式**。任务会在上一次执行 **完成** 后，等待 `seconds` 指定的时间，再开始下一次。适合执行时间不固定的耗时任务（如 SSH show 命令）。
-
-- `seconds` (时间/秒):
-    - 配合 `mode` 使用，定义间隔或延迟的秒数。
-    - 当 `frequency: 1` 时，此字段被忽略。
-
-### 数据存储方式
-
-每个任务的 `storage` 字段可以设为以下三种值：
-1.  **`sqlite`**: 将采集或解析后的结构化数据存入 SQLite 数据库，便于查询和分析。
-2.  **`file`**: 将任务执行返回的原始文本输出保存到文件中。
-3.  **`null`**: 执行任务，但不存储任何返回结果。适用于执行一些操作型命令（如 `clear counters`）。
-
----
-
-## 🧾 示例配置 (`config.yaml`)
+每个设备包含基本信息和连接配置：
 
 ```yaml
-# ===================================================================
-# Devices: 定义所有需要连接的网络设备
-# ===================================================================
 devices:
-  - name: Router_A
-    ip: 192.168.1.100
-    connection:
-      ssh:
-        username: admin
-        password: admin123  # 安全警告: 见下文安全建议
-        port: 22
-        timeout: 10
-        retry: 3
-      snmp:
-        community: public
-        port: 161
-        timeout: 10
-        retry: 3
+- name: "Router_A"           # 设备标识符，必须唯一
+  ip: "192.168.1.100"        # 设备IP地址
+  connection:                # 连接配置
+    ssh:                     # SSH连接配置
+      username: "admin"      # SSH用户名
+      password: "admin123"   # SSH密码
+      port: 22              # SSH端口，默认22
+      timeout: 10           # 连接超时时间(秒)
+      retry: 3              # 重试次数
+    snmp:                   # SNMP连接配置
+      community: "public"    # SNMP团体名
+      port: 161             # SNMP端口，默认161
+      timeout: 10           # 超时时间(秒)
+      retry: 3              # 重试次数
+```
 
-  - name: Fortinet_60
-    ip: 192.168.2.1
-    connection:
-      snmp:
-        community: awatch
-        port: 161
-        timeout: 2
-        retry: 0
+### 任务配置 (tasks)
 
-# ===================================================================
-# Tasks: 定义所有要执行的监控任务
-# ===================================================================
+#### 基础配置字段
+```yaml
 tasks:
-  # 任务1: (SNMP - 无限次, 固定频率) 获取Fortinet的CPU使用率
-  - alias: check_fortinet_cpu_usage
-    enabled: true
-    targets: [Fortinet_60]
-    protocol: snmp
-    type: snmpwalk
-    oid: 1.3.6.1.4.1.12356.101.4.4.2.1.2
-    schedule:
-      frequency: 0       # 0 = 无限次执行
-      mode: interval     # 按固定间隔触发
-      seconds: 5         # 每5秒一次
-    storage: file
-
-  # 任务2: (SSH - 无限次, 完成后延迟) 运行耗时的show tech-support
-  - alias: run_router_a_tech_support
-    enabled: true
-    targets: [Router_A]
-    protocol: ssh
-    command: show tech-support
-    schedule:
-      frequency: 0       # 0 = 无限次执行
-      mode: delay        # 在任务完成后，等待指定秒数
-      seconds: 120       # 完成后等待2分钟
-    storage: file
-
-  # 任务3: (SSH - 执行1次) 获取Router_A的版本号
-  - alias: get_router_a_version
-    enabled: false
-    targets: [Router_A]
-    protocol: ssh
-    command: show version
-    schedule:
-      frequency: 1       # 1 = 仅执行一次
-    storage: sqlite
-
-  # 任务4: (SSH - 执行1次, 无需存储)
-  - alias: clear_router_a_counters
-    enabled: false
-    targets: [Router_A]
-    protocol: ssh
-    command: clear counters
-    schedule:
-      frequency: 1       # 1 = 仅执行一次
-    storage: null
+- alias: "任务别名"          # 任务唯一标识符
+  enabled: true            # 是否启用任务
+  protocol: "ssh"          # 协议类型: ssh 或 snmp
+  targets:                 # 目标设备列表
+  - "Router_A"
+  - "Fortinet_60"
+  storage: "sqlite"        # 存储方式: sqlite, file, 或 null
 ```
 
----
-
-## 🔐 安全建议
-
-- **强烈建议使用 SSH 密钥**: 在 `config.yaml` 中使用明文密码存在极大的安全风险。未来的版本将支持通过 SSH 密钥进行认证，这是更安全的选择。在实现该功能前，请严格控制配置文件的访问权限。
-- **凭证管理**: 对于生产环境，建议将密码等敏感凭证从配置文件中移除，通过环境变量或专门的密钥管理服务（如 Vault）进行加载。
-
----
-
-## 🛠️ 设计与实现要点
-
-本节为后续代码开发提供指导。
-
-### 1. 配置解析
-- 应用启动时，需要解析 `config.yaml`，构建两个核心对象：`devices` 字典 (以 `name` 为 key) 和 `tasks` 列表。
-- 启动任务时，根据任务的 `targets` 列表，到 `devices` 字典中查找对应的连接信息。这种分离的结构使得连接信息可以被多个任务复用。
-
-### 2. 调度器实现
-- 调度器 (`scheduler.py`) 需要能够根据每个任务的 `schedule` 块来决定其调度方式。
-- **对于 `mode: interval`**: 可以直接使用 `apscheduler` 的 `IntervalTrigger`。
-- **对于 `mode: delay`**: `apscheduler` 没有内建的 "delay" trigger。需要手动实现：创建一个 job，该 job 执行完业务逻辑后，在自己的代码末尾，动态地创建下一个同样逻辑的 job，并设置其 `run_date` 为 `now() + delay_seconds`。
-- **对于 `frequency`**: 每次任务执行时，需要有一个计数器。当执行次数达到 `frequency` (且 `frequency` 不为0) 时，不再创建下一次的 job。
-
-### 3. 数据库操作
-- 在单进程模型下，所有数据库写操作都在同一个事件循环中，避免了多进程的锁问题，`aiosqlite` 可以安全使用。
-- 建议创建一个数据库管理模块 (`database.py`)，提供统一的、异步的 `save_result()` 方法，供所有采集任务调用。
-
-### 4. 前端资源
-- 当前前端资源 (JS/CSS) 通过 CDN 加载。为提高可靠性和支持内网部署，未来应将这些资源库下载到本地 `static` 目录中，并修改模板文件从本地加载。
-
----
-
-### 5. 日志系统设计
-
-项目的日志系统基于 `loguru` 构建，旨在提供一个全局统一、可配置的日志解决方案。
-
-- **统一配置入口**: 在 `core/ulog.py` 模块中，会提供一个 `setup_logging()` 函数，用于初始化整个应用的日志系统。`app.py` 在启动时会调用此函数。
-- **命令行控制级别**: 应用支持通过命令行参数动态设置日志级别。例如：
-  ```bash
-  # 以 DEBUG 级别启动，输出更详细的日志
-  python app.py --level DEBUG
-  
-  # 以 WARNING 级别启动，仅输出警告和错误信息
-  python app.py --level WARNING
-  ```
-- **多目标输出 (Sinks)**:
-    - **控制台**: 用于在运行时实时观察应用状态，输出格式将包含时间、级别、模块名和颜色，便于快速定位问题。
-    - **文件**: 所有日志（`DEBUG`及以上）都会被写入 `log/` 目录下的文件中，并按模块进行分离，方便针对性地排查问题。主要日志文件包括：
-        - `app.log`: 主应用日志。
-        - `collector.log`: 数据采集相关日志。
-        - `scheduler.log`: 任务调度相关日志。
-        - `web_server.log`: Web服务相关日志。
-- **日志自动管理**: 文件日志会自动进行 **轮转 (Rotation)** 和 **保留 (Retention)**。例如，当日志文件达到10MB时会自动创建新文件，并且默认仅保留最近7天的日志，以防止日志文件无限增长，耗尽磁盘空间。
-
----
-
-## 📁 项目结构
-
+#### 调度配置 (schedule)
+```yaml
+schedule:
+  frequency: 0             # 执行次数限制，0表示无限制
+  mode: "interval"         # 调度模式: interval 或 delay
+  seconds: 60             # 执行间隔(秒)
 ```
-hwatch/
-├── app.py                  # 项目入口脚本
-├── pyproject.toml          # 项目依赖配置
-├── README.md               # 项目说明文档
-├── config.yaml             # 应用配置文件
-├── core/                   # 主包目录
-│   ├── __init__.py         # 包初始化文件
-│   ├── collector.py        # 异步数据采集模块 (SSH/SNMP)
-│   ├── database.py         # 异步数据库操作模块
-│   ├── scheduler.py        # 异步任务调度器
-│   ├── web_server.py       # 异步Web服务
-│   ├── config_loader.py    # 配置加载与解析模块
-│   ├── watch.py            # 配置监控模块
-│   └── ulog.py             # 全局日志配置模块
-├── views/                  # Web视图目录
-│   ├── static/             # 静态资源文件（CSS, JS）
-│   └── templates/          # HTML 模板文件
-├── log/                    # 日志目录
-└── outfile/                # 输出文件目录
+
+**调度模式说明：**
+- `interval`: 固定间隔执行，任务完成后立即安排下次执行
+- `delay`: 延迟执行，任务完成后等待指定时间再执行下次
+
+#### SSH任务配置
+
+**单命令执行：**
+```yaml
+- alias: "get_router_version"
+  enabled: true
+  protocol: "ssh"
+  command: 
+  - "show version"
+  targets: ["Router_A"]
+  schedule:
+    frequency: 1           # 仅执行一次
+  storage: "sqlite"
 ```
+
+**多命令执行：**
+```yaml
+- alias: "system_check"
+  enabled: true
+  protocol: "ssh"
+  command: 
+  - "get system status"
+  - "get system arp"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 20
+    mode: "delay"
+    seconds: 120
+  storage: "file"
+```
+
+**带数据解析的SSH任务：**
+```yaml
+- alias: "parse_system_info"
+  enabled: true
+  protocol: "ssh"
+  command: 
+  - "get system status"
+  parse:
+    regex: "(?s)BIOS version:\\s*(\\d+).*?Branch point:\\s*(\\d+)"
+    calculate:
+    - "/1000000"           # 第一个值除以1000000
+    - "*10"               # 第二个值乘以10
+  labels:
+  - "BIOS_Version"
+  - "Branch_Point"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 0
+    mode: "delay"
+    seconds: 120
+  storage: "sqlite"
+```
+
+#### SNMP任务配置
+
+**SNMP Get (单值获取)：**
+```yaml
+- alias: "memory_usage"
+  enabled: true
+  protocol: "snmp"
+  type: "snmpget"
+  oid: "1.3.6.1.4.1.12356.101.4.1.4.0"
+  labels: 
+  - "fgSysMemUsage"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 0
+    mode: "interval"
+    seconds: 5
+  storage: "sqlite"
+```
+
+**SNMP Walk (多值获取)：**
+```yaml
+- alias: "processor_usage"
+  enabled: true
+  protocol: "snmp"
+  type: "snmpwalk"
+  oid: "1.3.6.1.4.1.12356.101.4.4.2.1.2"
+  labels:
+  - "fgProcessorUsage.1"
+  - "fgProcessorUsage.2"
+  - "fgProcessorUsage.3"
+  - "fgProcessorUsage.4"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 0
+    mode: "interval"
+    seconds: 5
+  storage: "sqlite"
+```
+
+### 数据解析配置 (parse)
+
+#### 正则表达式解析
+```yaml
+parse:
+  regex: "(?s)BIOS version:\\s*(\\d+).*?Branch point:\\s*(\\d+)"
+  calculate:
+  - "/1000000"             # 第一个值除以1000000
+  - "*10"                 # 第二个值乘以10
+```
+
+**正则表达式技巧：**
+- 使用 `(?s)` 启用多行模式，让 `.` 匹配换行符
+- 使用 `\\s*` 匹配可能的空白字符
+- 使用 `.*?` 进行非贪婪匹配
+- 捕获组 `()` 的数量必须与 `labels` 数量一致
+
+#### 数学运算 (calculate)
+支持的运算符：
+- `"+数值"`: 加法运算，如 `"+100"`
+- `"-数值"`: 减法运算，如 `"-50"`
+- `"*数值"`: 乘法运算，如 `"*1024"`
+- `"/数值"`: 除法运算，如 `"/1000"`
+
+**使用场景：**
+- 单位转换：字节转KB (`"/1024"`)
+- 百分比转小数：(`"/100"`)
+- 数值标准化：大数值缩放 (`"/1000000"`)
+
+### 基于实际配置的完整示例
+
+以下是基于项目实际配置文件的完整示例：
+
+```yaml
+devices:
+- name: "Router_A"
+  ip: "192.168.1.100"
+  connection:
+    ssh:
+      username: "admin"
+      password: "admin123"
+      port: 22
+      timeout: 10
+      retry: 3
+    snmp:
+      community: "public"
+      port: 161
+      timeout: 10
+      retry: 3
+
+- name: "Fortinet_60"
+  ip: "192.168.2.1"
+  connection:
+    ssh:
+      username: "admin"
+      password: "ChengduMicro@2025"
+      port: 22
+      timeout: 2
+      retry: 0
+    snmp:
+      community: "awatch"
+      port: 161
+      timeout: 2
+      retry: 0
+
+tasks:
+# SSH任务 - 系统信息采集带解析
+- alias: "run_show_command"
+  enabled: true
+  protocol: "ssh"
+  command: 
+  - "get system status"
+  - "get system arp"
+  parse:
+    regex: "(?s)BIOS version:\\s*(\\d+).*?Branch point:\\s*(\\d+)"
+    calculate:
+    - "/1000000"  # BIOS版本数值标准化
+    - "*10"       # Branch point放大10倍
+  labels:
+  - "BIOS_Version"
+  - "Branch_Point"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 20
+    mode: "delay"
+    seconds: 120
+  storage: "file"
+
+# SNMP任务 - CPU使用率监控
+- alias: "fgProcessorUsage_per"
+  enabled: true
+  protocol: "snmp"
+  type: "snmpwalk"
+  oid: "1.3.6.1.4.1.12356.101.4.4.2.1.2"
+  labels:
+  - "fgProcessorUsage.1"
+  - "fgProcessorUsage.2"
+  - "fgProcessorUsage.3"
+  - "fgProcessorUsage.4"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 0
+    mode: "interval"
+    seconds: 5
+  storage: "sqlite"
+
+# SNMP任务 - 内存使用率监控
+- alias: "fgSysMemUsage"
+  enabled: true
+  protocol: "snmp"
+  type: "snmpget"
+  oid: "1.3.6.1.4.1.12356.101.4.1.4.0"
+  labels: 
+  - "fgSysMemUsage"
+  targets: ["Fortinet_60"]
+  schedule:
+    frequency: 0
+    mode: "interval"
+    seconds: 5
+  storage: "sqlite"
+
+# SSH任务 - 一次性执行
+- alias: "get_router_a_version"
+  enabled: false
+  protocol: "ssh"
+  command: 
+  - "show version"
+  targets: ["Router_A"]
+  schedule:
+    frequency: 1  # 仅执行一次
+  storage: "sqlite"
+
+# SSH任务 - 操作型命令(不存储结果)
+- alias: "clear_router_a_counters"
+  enabled: false
+  protocol: "ssh"
+  command: 
+  - "clear counters"
+  targets: ["Router_A"]
+  schedule:
+    frequency: 1
+  storage: null  # 不存储结果
+```
+
+## 📊 Web界面使用
+
+### 仪表板
+- 实时显示所有启用任务的状态
+- 图表展示历史数据趋势
+- 鼠标悬停查看详细数值
+
+### 任务管理
+- 查看所有配置的任务
+- 启用/禁用任务
+- 实时编辑配置文件
+
+### 数据查看
+- SQLite存储的数据可在Web界面查看图表
+- 文件存储的数据保存在 `outfile/` 目录
+
+## 🔧 高级功能
+
+### SSH连接池
+系统自动管理SSH连接池，提高性能：
+- 连接复用：相同任务和设备的连接会被复用
+- 自动清理：超过10分钟未使用的连接会被自动清理
+- 健康检查：使用前会检查连接状态
+
+### 错误处理
+- 连接失败自动重试
+- 指数退避重试策略
+- 详细的错误日志记录
+
+### 数据存储
+- **SQLite**: 结构化数据，支持图表展示
+- **File**: 原始输出，便于调试和审计
+
+## 📝 日志文件
+
+- `log/scheduler.log`: 任务调度日志
+- `outfile/*.log`: 文件存储模式的输出文件
+
+## 🚨 注意事项
+
+1. **安全性**: 配置文件包含明文密码，请妥善保管
+2. **网络**: 确保监控主机能访问目标设备的SSH/SNMP端口
+3. **性能**: 合理设置任务间隔，避免过于频繁的采集
+4. **存储**: SQLite数据库会随时间增长，定期清理历史数据
+
+## 🔍 故障排除
+
+### 常见问题
+
+**SSH连接失败**
+- 检查IP地址、用户名、密码
+- 确认SSH服务已启用
+- 检查网络连通性
+
+**SNMP无响应**
+- 验证SNMP团体名
+- 确认SNMP服务已启用
+- 检查OID是否正确
+
+**正则表达式不匹配**
+- 使用调试模式查看原始输出
+- 验证捕获组数量与labels一致
+- 测试正则表达式语法
+
+**数学运算失败**
+- 确认原始值为数字格式
+- 检查运算符语法
+- 避免除零操作
+
+## 📈 性能优化建议
+
+1. **合理设置采集间隔**: 根据数据变化频率调整
+2. **使用连接池**: SSH任务会自动复用连接
+3. **批量命令**: 在单个SSH会话中执行多个命令
+4. **存储选择**: 频繁查询的数据使用SQLite，调试数据使用文件
+
+## 🤝 贡献指南
+
+欢迎提交Issue和Pull Request来改进项目！
+
+## 📄 许可证
+
+[添加许可证信息]
