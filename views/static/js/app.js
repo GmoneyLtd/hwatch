@@ -39,54 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setDefaultTimeRange();
 
         if (!dataChart) {
-            const ctx = chartContainer.getContext('2d');
-            dataChart = new Chart(ctx, {
-                type: 'line',
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                tooltipFormat: 'yyyy-MM-dd HH:mm:ss',
-                                displayFormats: {
-                                    millisecond: 'HH:mm:ss.SSS',
-                                    second: 'HH:mm:ss',
-                                    minute: 'HH:mm',
-                                    hour: 'HH:mm',
-                                    day: 'MM-dd',
-                                    week: 'yyyy-MM-dd',
-                                    month: 'yyyy-MM',
-                                    quarter: 'yyyy [Q]Q',
-                                    year: 'yyyy'
-                                }
-                            },
-                            ticks: {
-                                autoSkip: true,
-                                maxTicksLimit: 10,
-                                maxRotation: 0,
-                                minRotation: 0,
-                                source: 'data',
-                                includeBounds: false,
-                                padding: 5,
-                                font: {
-                                    size: 11
-                                }
-                            },
-                            offset: false,
-                            grid: {
-                                offset: false
-                            },
-                            bounds: 'data'
-                        },
-                        y: {
-                            beginAtZero: false,
-                            min: 0
-                        }
-                    }
-                }
-            });
+            dataChart = echarts.init(chartContainer);
         }
 
         // 初始化时加载数据
@@ -127,20 +80,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setupChartEventListeners() {
         // 任务选择改变时触发数据加载
-        if (taskDropdownToggle) {
-            taskDropdownToggle.addEventListener('click', (event) => {
-                event.stopPropagation();
-                taskDropdownMenu.style.display = taskDropdownMenu.style.display === 'none' ? 'block' : 'none';
-            });
-        }
-
         if (taskDropdownMenu) {
             taskDropdownMenu.addEventListener('change', (event) => {
                 if (event.target.name === 'task') {
                     const selectedTask = event.target.value;
                     document.getElementById('chart-task').value = selectedTask;
                     taskDropdownToggle.textContent = selectedTask;
-                    taskDropdownMenu.style.display = 'none';
+                    taskDropdownMenu.classList.remove('show');
 
                     // Clear device selection
                     const dropdownMenu = document.getElementById('dropdownMenu');
@@ -240,7 +186,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    let chartDataAbortController = null;
     async function loadChartData() {
+        if (chartDataAbortController) {
+            chartDataAbortController.abort();
+        }
+        chartDataAbortController = new AbortController();
+        const signal = chartDataAbortController.signal;
+
+        if (dataChart) {
+            dataChart.clear();
+        }
         hideErrorMessage();
         const formData = new FormData(chartForm);
         const params = new URLSearchParams(formData);
@@ -269,15 +225,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const requestUrl = `/api/chart?${urlParams.toString()}`;
         console.log('Requesting chart data from:', requestUrl);
         try {
-            const response = await fetch(requestUrl);
+            const response = await fetch(requestUrl, { signal });
             console.log('Response from chart API:', response);
             const data = await response.json();
             console.log('Parsed chart data:', data);
             updateChart(data);
             updateChartFilterOptions(data);
         } catch (error) {
-            console.error('Error loading chart data:', error);
-            displayErrorMessage('Failed to load chart data. Please try again.');
+            if (error.name === 'AbortError') {
+                console.log('Fetch aborted');
+            } else {
+                console.error('Error loading chart data:', error);
+                displayErrorMessage('Failed to load chart data. Please try again.');
+            }
         }
     }
 
@@ -386,18 +346,67 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateChart(data) {
         if (dataChart) {
-            dataChart.data.datasets = data.datasets;
-            dataChart.update();
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '3%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                legend: {
+                    data: data.datasets.map(dataset => dataset.label)
+                },
+                xAxis: {
+                    type: 'time',
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#333'
+                        }
+                    },
+                    axisLabel: {
+                        formatter: function (value) {
+                            const date = new Date(value);
+                            return echarts.format.formatTime('yyyy-MM-dd HH:mm:ss', date);
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#333'
+                        }
+                    }
+                },
+                series: data.datasets.map(dataset => ({
+                    name: dataset.label,
+                    type: 'line',
+                    data: dataset.data.map(item => [item.x, item.y]),
+                    showSymbol: false,
+                    emphasis: {
+                        focus: 'series'
+                    }
+                }))
+            };
+            dataChart.setOption(option);
         }
     }
 
     function updateChartFilterOptions(data) {
         const selectedTask = document.getElementById('chart-task').value;
 
-
-
         // 更新任务选项
         taskDropdownMenu.innerHTML = '';
+        taskDropdownToggle.textContent = 'Select a task'; // Reset the button text
         if (data.tasks && data.tasks.length > 0) {
             data.tasks.forEach(task => {
                 const isChecked = (task === selectedTask);
@@ -570,6 +579,11 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     function switchView(viewId) {
+        const currentView = document.querySelector('.view.active');
+        if (currentView && currentView.id === 'chart-view' && viewId !== 'chart-view') {
+            clearTaskAndDeviceSelection();
+        }
+
         views.forEach(view => view.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
 
@@ -587,28 +601,29 @@ document.addEventListener('DOMContentLoaded', function () {
     tasksTableBody.addEventListener('click', handleTaskAction);
     configForm.addEventListener('submit', handleConfigSave);
 
-    // 设备下拉菜单功能
-    const dropdownToggle = document.getElementById('dropdownToggle');
-    const dropdownMenu = document.getElementById('dropdownMenu');
+    function setupDropdown(dropdownId, toggleId, menuId) {
+        const dropdown = document.getElementById(dropdownId);
+        const toggle = document.getElementById(toggleId);
+        const menu = document.getElementById(menuId);
 
-    if (dropdownToggle) {
-        dropdownToggle.addEventListener('click', (event) => {
-            event.stopPropagation();
-            dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
-        });
+        if (toggle && menu) {
+            toggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                menu.classList.toggle('show');
+            });
+        }
     }
 
-    // 点击外部关闭下拉菜单
-    document.addEventListener('click', (event) => {
-        const deviceDropdown = document.getElementById('deviceDropdown');
-        if (deviceDropdown && !deviceDropdown.contains(event.target)) {
-            document.getElementById('dropdownMenu').style.display = 'none';
-        }
+    setupDropdown('taskDropdown', 'taskDropdownToggle', 'taskDropdownMenu');
+    setupDropdown('deviceDropdown', 'dropdownToggle', 'dropdownMenu');
 
-        const taskDropdown = document.getElementById('taskDropdown');
-        if (taskDropdown && !taskDropdown.contains(event.target)) {
-            taskDropdownMenu.style.display = 'none';
-        }
+    document.addEventListener('click', (event) => {
+        const openDropdowns = document.querySelectorAll('.dropdown-menu.show');
+        openDropdowns.forEach(dropdown => {
+            if (!dropdown.parentElement.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
     });
 
     // 初始视图
