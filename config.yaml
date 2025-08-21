@@ -66,10 +66,14 @@ tasks:
   enabled: true
   protocol: ssh
   schedule:
-    frequency: 2
+    frequency: 20
     mode: delay
     seconds: 120
-  storage: file
+  parse:
+    regex: Branch point:\s*(\d+)
+  labels:
+  - Branch_Point
+  storage: sqlite
   targets:
   - Fortinet_60
 - alias: get_router_a_version
