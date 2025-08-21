@@ -8,7 +8,7 @@ devices:
     ssh:
       password: admin123
       port: 22
-      retry: 3
+      retry: 2
       timeout: 10
       username: admin
   ip: 192.168.1.100
@@ -43,7 +43,7 @@ devices:
   name: AP-205
 tasks:
 - alias: fgProcessorUsage_per
-  enabled: true
+  enabled: false
   labels:
   - fgProcessorUsage.1
   - fgProcessorUsage.2
@@ -64,19 +64,19 @@ tasks:
   - get system status
   - get system arp
   enabled: true
+  labels:
+  - BIOS_Version
+  - Branch_Point
+  parse:
+    calculate:
+    - /1000000
+    - '*10'
+    regex: (?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)
   protocol: ssh
   schedule:
     frequency: 20
     mode: delay
     seconds: 120
-  parse:
-    regex: (?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)
-    calculate:
-    - "/1000000"  # BIOS_Version除以1000000
-    - "*10"       # Branch_Point乘以10
-  labels:
-  - BIOS_Version
-  - Branch_Point
   storage: file
   targets:
   - Fortinet_60
@@ -155,7 +155,7 @@ tasks:
     frequency: 0
     mode: interval
     seconds: 5
-  storage: sqlite
+  storage: file
   targets:
   - Fortinet_60
   - AP-205

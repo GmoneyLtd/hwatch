@@ -20,16 +20,16 @@ CONFIG_PATH = "config.yaml"
 
 # --- 主应用逻辑 ---
 def reload_config_and_reschedule(scheduler: TaskScheduler):
-    """回调函数: 重新加载配置并更新调度器。"""
+    """回调函数: 重新加载配置并增量更新调度器。"""
     logger.info("检测到配置变更, 开始重载...")
     new_config = load_config(CONFIG_PATH)
     if new_config:
-        # 更新Web服务器和调度器持有的配置
+        # 更新Web服务器持有的配置
         app_state["config"] = new_config
-        scheduler.config = new_config
-        scheduler.device_map = {device.name: device for device in new_config.devices}
-        scheduler.schedule_all_tasks()
-        logger.success("配置重载和任务重新调度成功! ")
+
+        # 使用增量更新机制
+        scheduler.reload_config_and_update_tasks(new_config)
+        logger.success("配置重载和任务增量更新成功! ")
     else:
         logger.error("加载新配置失败, 调度器将继续使用旧配置运行。")
 
