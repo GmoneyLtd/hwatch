@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initChartView() {
         // 设置默认时间范围为最近2小时
         setDefaultTimeRange();
-        
+
         if (!dataChart) {
             const ctx = chartContainer.getContext('2d');
             dataChart = new Chart(ctx, {
@@ -59,10 +59,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
-        
+
         // 初始化时加载数据
         loadChartData();
-        
+
         // 添加事件监听器
         setupChartEventListeners();
     }
@@ -70,22 +70,32 @@ document.addEventListener('DOMContentLoaded', function () {
     function initOutfileView() {
         loadOutfileList();
     }
-    
-    // 设置默认时间范围为最近2小时
+
+    // 设置默认时间范围为最近2小时（基于当前时区）
     function setDefaultTimeRange() {
         const now = new Date();
         const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-        
+
         const startInput = document.getElementById('chart-start');
         const endInput = document.getElementById('chart-end');
-        
-        // 格式化为datetime-local需要的格式: YYYY-MM-DDTHH:mm
+
+        // 格式化为datetime-local需要的格式: YYYY-MM-DDTHH:mm（本地时区）
         if (startInput && endInput) {
-            startInput.value = twoHoursAgo.toISOString().slice(0, 16);
-            endInput.value = now.toISOString().slice(0, 16);
+            // 使用本地时区时间，而不是UTC时间
+            const formatLocalDateTime = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+
+            startInput.value = formatLocalDateTime(twoHoursAgo);
+            endInput.value = formatLocalDateTime(now);
         }
     }
-    
+
     function setupChartEventListeners() {
         // 任务选择改变时触发数据加载
         if (taskDropdownToggle) {
@@ -117,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
-    
+
         // 时间选择改变时触发数据加载
         const timeInputs = document.querySelectorAll('#chart-start, #chart-end');
         timeInputs.forEach(input => {
@@ -125,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function () {
             input.removeEventListener('change', timeInputChangeHandler);
             input.addEventListener('change', timeInputChangeHandler);
         });
-        
+
         // 设备选择改变时触发数据加载
         const dropdownMenu = document.getElementById('dropdownMenu');
         if (dropdownMenu) {
@@ -140,13 +150,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     }
-    
-    
-    
+
+
+
     function timeInputChangeHandler() {
         loadChartData();
     }
-    
+
     function deviceChangeHandler(event) {
         if (event.target.name === 'devices') {
             updateDeviceCount();
@@ -191,18 +201,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-        async function loadChartData() {
+    async function loadChartData() {
         hideErrorMessage();
         const formData = new FormData(chartForm);
         const params = new URLSearchParams(formData);
-        
+
         // 特殊处理devices参数，使用列表方式传递
         const devices = [];
         const deviceCheckboxes = document.querySelectorAll('input[name="devices"]:checked');
         deviceCheckboxes.forEach(checkbox => {
             devices.push(checkbox.value);
         });
-        
+
         // 构建查询参数
         const urlParams = new URLSearchParams();
         for (const [key, value] of params.entries()) {
@@ -211,12 +221,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 urlParams.append(key, value);
             }
         }
-        
+
         // 添加devices参数（使用列表方式）
         if (devices.length > 0) {
             urlParams.append('devices', devices.join(','));
         }
-        
+
         const requestUrl = `/api/chart?${urlParams.toString()}`;
         console.log('Requesting chart data from:', requestUrl);
         try {
@@ -246,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
             displayErrorMessage('Failed to load outfile list. Please try again.');
         }
     }
-    
+
     // --- UI Rendering and Updates ---
 
     function renderTasksTable(tasks) {
@@ -266,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (task.target_ips && task.target_ips.length > 0) {
                 ipInfo = task.target_ips.join(', ');
             }
-            
+
             row.innerHTML = `
                 <td>${deviceInfo}</td>
                 <td>${task.alias}</td>
@@ -352,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateChartFilterOptions(data) {
         const selectedTask = document.getElementById('chart-task').value;
 
-        
+
 
         // 更新任务选项
         taskDropdownMenu.innerHTML = '';
@@ -371,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const dropdownMenu = document.getElementById('dropdownMenu');
         const deviceDropdown = document.getElementById('deviceDropdown');
         const deviceCountSpan = document.getElementById('deviceCount');
-        
+
         // 始终显示设备下拉菜单（根据是否有可用设备决定内容）
         deviceDropdown.style.display = 'block';
         if (data.available_devices && data.available_devices.length > 0) {
@@ -385,15 +395,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             }
-            
+
             dropdownMenu.innerHTML = '';
-            
+
             data.available_devices.forEach(device => {
                 const isChecked = (data.selected_devices && data.selected_devices.includes(device)) || currentlyCheckedDevices.has(device);
                 const item = createDropdownItem('checkbox', 'devices', device, `device-${device}`, device, isChecked);
                 dropdownMenu.appendChild(item);
             });
-            
+
             // 更新设备计数
             updateDeviceCount();
         } else {
@@ -404,13 +414,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     }
-    
-    
+
+
 
     function updateDeviceCount() {
         const dropdownMenu = document.getElementById('dropdownMenu');
         if (!dropdownMenu) return;
-        
+
         const checkedCount = dropdownMenu.querySelectorAll('input[type="checkbox"]:checked').length;
         const totalCount = dropdownMenu.querySelectorAll('input[type="checkbox"]').length;
         const deviceCountSpan = document.getElementById('deviceCount');
@@ -434,10 +444,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const device = button.dataset.device;
             const alias = button.dataset.alias;
             const action = button.dataset.action;
-            
+
             // 立即更新UI状态
             updateTaskUI(button, action);
-            
+
             const requestUrl = `/api/tasks/${action}/${device}/${alias}`;
             console.log(`Sending ${action} request to: ${requestUrl}`);
             try {
@@ -470,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
             button.classList.add('btn-success');
             button.innerHTML = '<i class="fas fa-play"></i> Enable';
         }
-        
+
         // 更新状态标签
         const statusBadge = button.closest('tr').querySelector('.status-badge');
         if (statusBadge) {
@@ -490,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function () {
         event.preventDefault();
         hideErrorMessage('config-error');
         const content = configEditor.getValue();
-        
+
         console.log('Saving config to /api/config with content:', content);
         try {
             const response = await fetch('/api/config', {
@@ -516,8 +526,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    
-    
+
+
     // --- View Switching ---
 
     const viewInitializers = {
@@ -597,18 +607,18 @@ function hideErrorMessage(elementId = 'general-error-message') {
 function createDropdownItem(type, name, value, id, textContent, isChecked) {
     const div = document.createElement('div');
     div.className = 'dropdown-item';
-    
+
     const input = document.createElement('input');
     input.type = type;
     input.name = name;
     input.value = value;
     input.id = id;
     input.checked = isChecked;
-    
+
     const label = document.createElement('label');
     label.htmlFor = id;
     label.textContent = textContent;
-    
+
     div.appendChild(input);
     div.appendChild(label);
     return div;

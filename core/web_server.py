@@ -12,7 +12,7 @@ from loguru import logger
 
 # 导入项目模块
 from core.config_loader import AppConfig, load_config
-from core.database import get_chart_data
+from core.database import get_available_devices, get_available_tasks, get_chart_data
 
 # --- 全局变量与应用实例 ---
 
@@ -195,17 +195,86 @@ async def save_config(request: Request, user: dict = current_user_dependency):
 
 
 @app.get("/api/chart")
-async def get_chart_data_api(task_alias: str, start: str, end: str, user: dict = current_user_dependency):
+async def get_chart_data_api(
+    task_alias: str = None,
+    start: str = None,
+    end: str = None,
+    devices: str = None,
+    user: dict = current_user_dependency,
+):
     if not user:
         raise HTTPException(status_code=401)
-    try:
-        start_date = datetime.fromisoformat(start)
-        end_date = datetime.fromisoformat(end)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="日期格式无效,请使用ISO格式。") from None
 
-    data = await get_chart_data(task_alias, start_date, end_date)
-    return data
+    config: AppConfig = app_state.get("config")
+    if not config:
+        return {"tasks": [], "available_devices": [], "selected_devices": [], "datasets": []}
+
+    # 获取任务列表 - 基于数据库中实际存在数据的任务
+    tasks = await get_available_tasks()
+
+    # 获取设备列表 - 基于数据库中实际存在数据的设备
+    all_devices = await get_available_devices()
+
+    # 解析选中的设备
+    selected_devices = devices.split(",") if devices else []
+
+    # 构建基础响应数据
+    response_data = {
+        "tasks": tasks,
+        "available_devices": all_devices,
+        "selected_devices": selected_devices,
+        "datasets": [],
+    }
+
+    # 如果提供了具体参数，则查询图表数据
+    if task_alias and start and end:
+        try:
+            start_date = datetime.fromisoformat(start)
+            end_date = datetime.fromisoformat(end)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="日期格式无效,请使用ISO格式。") from None
+
+        # 获取原始数据
+        raw_data = await get_chart_data(task_alias, start_date, end_date)
+
+        # 转换为 Chart.js 格式
+        datasets = []
+        if raw_data:
+            # 按设备分组数据
+            device_data = {}
+            for row in raw_data:
+                device = row["device_name"]
+                if selected_devices and device not in selected_devices:
+                    continue
+
+                if device not in device_data:
+                    device_data[device] = []
+
+                device_data[device].append({
+                    "x": row["timestamp"],
+                    "y": float(row["value"])
+                    if row["value"] and row["value"].replace(".", "").replace("-", "").isdigit()
+                    else 0,
+                })
+
+            # 为每个设备创建数据集
+            colors = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"]
+            color_index = 0
+
+            for device, data_points in device_data.items():
+                datasets.append({
+                    "label": f"{task_alias} - {device}",
+                    "data": data_points,
+                    "borderColor": colors[color_index % len(colors)],
+                    "backgroundColor": colors[color_index % len(colors)] + "20",
+                    "fill": False,
+                    "tension": 0.1,
+                })
+                color_index += 1
+
+        response_data["datasets"] = datasets
+
+    return response_data
 
 
 @app.get("/api/outfiles")

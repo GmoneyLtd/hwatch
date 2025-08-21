@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from typing import Any
 
@@ -6,6 +5,7 @@ import aiosqlite
 from loguru import logger
 
 DB_FILE = "hwatch.db"
+
 
 async def init_db():
     """初始化数据库, 创建必要的表。"""
@@ -28,6 +28,7 @@ async def init_db():
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
 
+
 async def save_result(task_alias: str, device_name: str, results: dict[str, Any]):
     """
     将任务结果保存到数据库。
@@ -39,17 +40,52 @@ async def save_result(task_alias: str, device_name: str, results: dict[str, Any]
     """
     timestamp = datetime.now()
     records = [(timestamp, task_alias, device_name, key, str(value)) for key, value in results.items()]
-    
+
     try:
         async with aiosqlite.connect(DB_FILE) as db:
             await db.executemany(
                 "INSERT INTO task_results (timestamp, task_alias, device_name, key, value) VALUES (?, ?, ?, ?, ?)",
-                records
+                records,
             )
             await db.commit()
         logger.debug(f"成功为任务 {task_alias} on {device_name} 保存 {len(records)} 条记录。")
     except Exception as e:
         logger.error(f"保存任务结果到数据库失败 (任务: {task_alias}): {e}")
+
+
+async def get_available_tasks() -> list[str]:
+    """
+    获取数据库中实际存在数据的任务列表。
+
+    Returns:
+        List[str]: 包含数据的任务别名列表。
+    """
+    try:
+        async with aiosqlite.connect(DB_FILE) as db:
+            cursor = await db.execute("SELECT DISTINCT task_alias FROM task_results ORDER BY task_alias")
+            rows = await cursor.fetchall()
+            return [row[0] for row in rows]
+    except Exception as e:
+        logger.error(f"查询可用任务列表失败: {e}")
+        return []
+
+
+async def get_available_devices() -> list[str]:
+    """
+    获取数据库中实际存在数据的设备列表。
+
+    Returns:
+        List[str]: 包含数据的设备名称列表。
+    """
+    try:
+        async with aiosqlite.connect(DB_FILE) as db:
+            cursor = await db.execute("SELECT DISTINCT device_name FROM task_results ORDER BY device_name")
+            rows = await cursor.fetchall()
+            return [row[0] for row in rows]
+    except Exception as e:
+        logger.error(f"查询可用设备列表失败: {e}")
+        return []
+
 
 async def get_chart_data(task_alias: str, start_date: datetime, end_date: datetime) -> list[dict[str, Any]]:
     """
@@ -68,11 +104,10 @@ async def get_chart_data(task_alias: str, start_date: datetime, end_date: dateti
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT timestamp, device_name, key, value FROM task_results WHERE task_alias = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp ASC",
-                (task_alias, start_date, end_date)
+                (task_alias, start_date, end_date),
             )
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
         logger.error(f"查询图表数据失败 (任务: {task_alias}): {e}")
         return []
-
