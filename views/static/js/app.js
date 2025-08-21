@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const config = await response.text();
-            console.log('Parsed config data:', config);
+            // console.log('Parsed config data:', config);
             if (configEditor) {
                 configEditor.setValue(config, -1);
             }
