@@ -49,11 +49,39 @@ document.addEventListener('DOMContentLoaded', function () {
                         x: {
                             type: 'time',
                             time: {
-                                tooltipFormat: 'yyyy-MM-dd HH:mm:ss'
-                            }
+                                tooltipFormat: 'yyyy-MM-dd HH:mm:ss',
+                                displayFormats: {
+                                    millisecond: 'HH:mm:ss.SSS',
+                                    second: 'HH:mm:ss',
+                                    minute: 'HH:mm',
+                                    hour: 'HH:mm',
+                                    day: 'MM-dd',
+                                    week: 'yyyy-MM-dd',
+                                    month: 'yyyy-MM',
+                                    quarter: 'yyyy [Q]Q',
+                                    year: 'yyyy'
+                                }
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 10,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                source: 'data',
+                                includeBounds: false,
+                                padding: 5,
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            offset: false,
+                            grid: {
+                                offset: false
+                            },
+                            bounds: 'data'
                         },
                         y: {
-                            beginAtZero: true
+                            beginAtZero: false
                         }
                     }
                 }
