@@ -34,6 +34,8 @@ ENV/
 .idea/
 *.swp
 *.swo
+.codebuddy/
+
 
 # 日志和输出文件
 log/

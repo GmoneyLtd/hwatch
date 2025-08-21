@@ -27,6 +27,7 @@ def create_module_filter(target_modules: list[str], include: bool = True) -> Cal
     Returns:
         过滤器函数
     """
+
     def filter_func(record: dict[str, object]) -> bool:
         if record["name"] is None:
             return False
@@ -59,7 +60,7 @@ def setup_logging(
     retention: str = "7 days",
     log_dir: str = "log",
     modules: list[str] | None = None,
-    ):
+):
     """配置全局日志记录器。
 
     Args:
@@ -70,7 +71,26 @@ def setup_logging(
         modules: 要单独记录的模块列表, 默认为None表示使用CORE_MODULES
     """
     # 确保日志目录存在
-    os.makedirs(log_dir, exist_ok=True)
+    try:
+        # 先检查目录是否存在
+        if not os.path.exists(log_dir):
+            logger.debug(f"日志目录 {log_dir} 不存在, 正在创建...")
+            os.makedirs(log_dir)
+            logger.debug(f"成功创建日志目录: {log_dir}")
+
+        # 验证目录是否可写
+        if not os.access(log_dir, os.W_OK):
+            logger.warning(f"日志目录 {log_dir} 不可写, 将使用临时目录")
+            import tempfile
+
+            log_dir = tempfile.gettempdir()
+            logger.info(f"使用临时目录作为日志目录: {log_dir}")
+    except Exception as e:
+        logger.error(f"处理日志目录 {log_dir} 失败: {e}")
+        import tempfile
+
+        log_dir = tempfile.gettempdir()
+        logger.info(f"使用临时目录作为日志目录: {log_dir}")
 
     # 移除所有现有处理器
     logger.remove()
