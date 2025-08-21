@@ -330,14 +330,13 @@ async def get_chart_data_api(
             sorted_series = sorted(series_data.items(), key=lambda x: (x[1]["device"], x[1]["key"]))
 
             for color_index, (_, series_info) in enumerate(sorted_series):
-                device_keys = [k for k, v in series_data.items() if v["device"] == series_info["device"]]
+                # device_keys = [k for k, v in series_data.items() if v["device"] == series_info["device"]]
 
                 # 生成标签
-                if len(device_keys) == 1:
-                    label = f"{series_info['device']}"
-                else:
-                    key_display = _simplify_oid_key(series_info["key"])
-                    label = f"{series_info['device']} - {key_display}"
+                # if len(device_keys) == 1:
+                #     label = f"{series_info['key']}"
+                # else:
+                label = f"{series_info['device']} - {series_info['key']}"
 
                 # 生成颜色
                 border_color = _generate_chart_color(color_index)
