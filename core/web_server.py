@@ -14,6 +14,49 @@ from loguru import logger
 from core.config_loader import AppConfig, load_config
 from core.database import get_available_devices, get_available_tasks, get_chart_data
 
+
+def _generate_chart_color(index: int) -> str:
+    """基于索引生成图表颜色, 支持无限数量的key"""
+    base_colors = [
+        "#FF6384",
+        "#36A2EB",
+        "#FFCE56",
+        "#4BC0C0",
+        "#9966FF",
+        "#FF9F40",
+        "#C9CBCF",
+        "#FF9F40",
+        "#4BC0C0",
+        "#FF6384",
+        "#36A2EB",
+        "#FFCE56",
+    ]
+
+    if index < len(base_colors):
+        return base_colors[index]
+
+    # 使用HSL生成新颜色
+    hue = (index * 137.5) % 360
+    saturation = 70 + (index % 3) * 10
+    lightness = 50 + (index % 4) * 10
+    return f"hsl({hue}, {saturation}%, {lightness}%)"
+
+
+def _simplify_oid_key(key: str) -> str:
+    """简化OID格式的key显示"""
+    if "." in key and len(key.split(".")) > 6:
+        key_parts = key.split(".")
+        return ".".join(key_parts[-2:])
+    return key
+
+
+def _get_background_color(border_color: str) -> str:
+    """获取对应的背景颜色"""
+    if border_color.startswith("hsl"):
+        return border_color.replace("hsl", "hsla").replace(")", ", 0.2)")
+    return border_color + "20"
+
+
 # --- 全局变量与应用实例 ---
 
 app = FastAPI(title="Hwatch")
@@ -249,37 +292,65 @@ async def get_chart_data_api(
         # 转换为 Chart.js 格式
         datasets = []
         if raw_data:
-            # 按设备分组数据
-            device_data = {}
+            # 按设备和key组合分组数据
+            series_data = {}
             for row in raw_data:
                 device = row["device_name"]
+                key = row["key"]
+
                 if device not in selected_devices:
                     continue
 
-                if device not in device_data:
-                    device_data[device] = []
+                # 创建唯一的系列标识符: device_key
+                series_key = f"{device}_{key}"
 
-                device_data[device].append({
-                    "x": row["timestamp"],
-                    "y": float(row["value"])
-                    if row["value"] and row["value"].replace(".", "").replace("-", "").isdigit()
-                    else 0,
-                })
+                if series_key not in series_data:
+                    series_data[series_key] = {"device": device, "key": key, "data": []}
 
-            # 为每个设备创建数据集
-            colors = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"]
-            color_index = 0
+                # 解析数值, 处理各种可能的数据格式
+                value = row["value"]
+                numeric_value = 0.0
 
-            for device, data_points in device_data.items():
+                if value is not None:
+                    try:
+                        # 尝试直接转换为浮点数
+                        numeric_value = float(value)
+                    except (ValueError, TypeError):
+                        # 如果转换失败, 尝试清理字符串后再转换
+                        try:
+                            cleaned_value = str(value).strip().replace(",", "")
+                            if cleaned_value and cleaned_value.replace(".", "").replace("-", "").isdigit():
+                                numeric_value = float(cleaned_value)
+                        except (ValueError, TypeError):
+                            numeric_value = 0.0
+
+                series_data[series_key]["data"].append({"x": row["timestamp"], "y": numeric_value})
+
+            # 为每个设备-key组合创建数据集
+            sorted_series = sorted(series_data.items(), key=lambda x: (x[1]["device"], x[1]["key"]))
+
+            for color_index, (_, series_info) in enumerate(sorted_series):
+                device_keys = [k for k, v in series_data.items() if v["device"] == series_info["device"]]
+
+                # 生成标签
+                if len(device_keys) == 1:
+                    label = f"{task_alias} - {series_info['device']}"
+                else:
+                    key_display = _simplify_oid_key(series_info["key"])
+                    label = f"{task_alias} - {series_info['device']} - {key_display}"
+
+                # 生成颜色
+                border_color = _generate_chart_color(color_index)
+                background_color = _get_background_color(border_color)
+
                 datasets.append({
-                    "label": f"{task_alias} - {device}",
-                    "data": data_points,
-                    "borderColor": colors[color_index % len(colors)],
-                    "backgroundColor": colors[color_index % len(colors)] + "20",
+                    "label": label,
+                    "data": series_info["data"],
+                    "borderColor": border_color,
+                    "backgroundColor": background_color,
                     "fill": False,
                     "tension": 0.1,
                 })
-                color_index += 1
 
         response_data["datasets"] = datasets
 

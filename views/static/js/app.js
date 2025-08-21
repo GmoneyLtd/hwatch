@@ -81,7 +81,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             bounds: 'data'
                         },
                         y: {
-                            beginAtZero: false
+                            beginAtZero: false,
+                            min: 0
                         }
                     }
                 }
