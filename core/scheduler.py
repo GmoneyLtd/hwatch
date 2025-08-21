@@ -24,6 +24,8 @@ class TaskScheduler:
     async def _execute_job(self, task: TaskConfig, device: DeviceConfig):
         """实际执行单个作业的包装函数。"""
         job_id = f"{task.alias}_{device.name}"
+        # 记录任务开始时间
+        start_time = datetime.now()
         logger.info(f"开始执行作业: {job_id}")
 
         # 运行采集任务
@@ -42,39 +44,46 @@ class TaskScheduler:
             # 使用任务别名和设备名的组合作为文件名, 追加模式
             file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
 
-            # 准备写入内容, 包含时间戳和任务信息
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            content_lines = [
-                f"=================== {timestamp} ===================",
+            # 构建完整的文件内容
+            start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+            # 构建任务信息头部
+            header_lines = [
+                f"=================== {start_time_str} ===================",
                 f"Task: {task.alias}",
                 f"Device: {device.name} ({device.ip})",
                 f"Protocol: {task.protocol}",
                 f"Type: {task.type}",
             ]
 
-            # 添加具体的任务参数
+            # 添加协议特定参数
             if task.protocol == "ssh" and task.command:
-                content_lines.append(f"Command: {str(task.command)}")
+                header_lines.append(f"Command: {str(task.command)}")
             elif task.protocol == "snmp" and task.oid:
-                content_lines.append(f"OID: {task.oid}")
+                header_lines.append(f"OID: {task.oid}")
 
-            content_lines.append("Results:\n")
-
-            # 添加结果内容
+            # 构建结果内容
+            result_lines = ["Results:"]
             if "raw_output" in results:
-                content_lines.append(results["raw_output"])
+                result_lines.append(results["raw_output"])
             else:
-                # 如果有解析后的结果,也显示
                 for key, value in results.items():
-                    content_lines.append(f"{key}: {value}")
+                    result_lines.append(f"{key}: {value}")
 
-            content_lines.append("")  # 空行分隔
+            # 构建结束标记
+            footer_lines = [
+                "",  # 空行分隔
+                f"+------------------ {end_time_str} ------------------+",
+                "",
+                "",
+                "",
+            ]
 
-            # 追加写入文件
+            # 合并所有内容并写入文件
+            all_content = "\n".join(header_lines + result_lines + footer_lines)
             with open(file_path, "a", encoding="utf-8") as f:
-                f.write("\n".join(content_lines))
-                # 添加分隔符: 空行 + 分隔线 + 空行
-                f.write("\n" + "+" + "-" * 57 + "+" + "\n\n\n")
+                f.write(all_content)
             logger.info(f"作业 {job_id} 的结果已追加到 {file_path}")
 
         # 处理执行频率和 'delay' 模式的重调度
