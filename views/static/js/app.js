@@ -332,8 +332,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="file-info">
                     <i class="fas fa-file"></i>
                     <span class="file-name" title="${file.name}">${file.name}</span>
-                    <span class="file-size">${sizeText}</span>
                     <span class="file-created-at">${dateText}</span>
+                    <span class="file-size">${sizeText}</span>
                 </div>
                 <div class="file-actions">
                     <a href="/outfile/${file.name}" download="${file.name}" class="btn btn-success">Download</a>
