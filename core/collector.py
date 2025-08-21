@@ -33,15 +33,35 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
         conn = conn_entry["connection"]
 
         # 检查连接是否仍然有效
-        if conn._transport is not None and not conn._transport.at_eof():
-            # 更新最后使用时间
-            conn_entry["last_used"] = time.time()
-            logger.debug(f"[SSH] 复用现有连接: {task.alias} on {device.name}")
-            return conn
-        else:
-            # 连接已断开, 清理连接池条目
+        try:
+            # 更全面的连接状态检查
+            if (
+                conn._transport is not None
+                and not conn._transport.at_eof()
+                and not conn.is_closing()
+                and not conn._transport.is_closing()
+            ):
+                # 尝试发送一个简单的命令来验证连接
+                try:
+                    await asyncio.wait_for(conn.run("echo test", check=True), timeout=2)
+                    # 连接有效，更新最后使用时间
+                    conn_entry["last_used"] = time.time()
+                    logger.debug(f"[SSH] 复用现有连接: {task.alias} on {device.name}")
+                    return conn
+                except Exception as test_e:
+                    logger.debug(f"[SSH] 连接测试失败: {task.alias} on {device.name} - {test_e}")
+                    raise Exception("连接测试失败")
+            else:
+                raise Exception("连接状态检查失败")
+        except Exception:
+            # 连接已断开或不可用, 清理连接池条目
+            try:
+                conn.close()
+                await conn.wait_closed()
+            except Exception:
+                pass  # 忽略关闭时的错误
             del _ssh_connection_pools[pool_key]
-            logger.debug(f"[SSH] 清理已断开连接: {task.alias} on {device.name}")
+            logger.info(f"[SSH] 清理失效连接并重新建立: {task.alias} on {device.name}")
 
     # 创建新连接(带重试机制)
     logger.info(f"[SSH] 建立新连接: {task.alias} on {device.name}")
