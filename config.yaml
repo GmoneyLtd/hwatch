@@ -19,6 +19,12 @@ devices:
       port: 161
       retry: 0
       timeout: 2
+    ssh:
+      port: 22
+      retry: 0
+      timeout: 2
+      username: admin
+      password: ChengduMicro@2025
   ip: 192.168.2.1
   name: Fortinet_60
 - connection:
@@ -55,16 +61,16 @@ tasks:
   type: snmpwalk
 - alias: run_router_a_tech_support
   command:
-  - show tech-support
-  enabled: false
+  - show
+  enabled: true
   protocol: ssh
   schedule:
-    frequency: 0
+    frequency: 2
     mode: delay
     seconds: 120
   storage: file
   targets:
-  - Router_A
+  - Fortinet_60
 - alias: get_router_a_version
   command:
   - show version
