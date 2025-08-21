@@ -42,7 +42,7 @@ class TaskScheduler:
             # 准备写入内容, 包含时间戳和任务信息
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             content_lines = [
-                f"================= {timestamp} =================",
+                f"=================== {timestamp} ===================",
                 f"Task: {task.alias}",
                 f"Device: {device.name} ({device.ip})",
                 f"Protocol: {task.protocol}",
@@ -69,9 +69,9 @@ class TaskScheduler:
 
             # 追加写入文件
             with open(file_path, "a", encoding="utf-8") as f:
-                f.write("\n".join(content_lines) + "\n")
-                # 添加分隔符: 空行 + 分隔线
-                f.write("\n" + "-+-" * 20 + "\n")
+                f.write("\n".join(content_lines))
+                # 添加分隔符: 空行 + 分隔线 + 空行
+                f.write("\n" + "+" + "-" * 57 + "+" + "\n\n\n")
             logger.info(f"作业 {job_id} 的结果已追加到 {file_path}")
 
         # 处理执行频率和 'delay' 模式的重调度
