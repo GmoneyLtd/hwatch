@@ -81,11 +81,11 @@ def load_config(config_path: str) -> AppConfig | None:
         logger.debug(f"加载了 {len(config.devices)} 个设备和 {len(config.tasks)} 个任务。")
 
         # 加载具体设备和任务的
-        print("-" * 50)
-        for device in config.devices:
-            for task in config.tasks:
-                print(f"Decice: {device.name} - Task: {task.alias}:\n{str(task)}")
-        print("-" * 50)
+        # print("-" * 50)
+        # for device in config.devices:
+        #     for task in config.tasks:
+        #         print(f"Decice: {device.name} - Task: {task.alias}:\n{str(task)}")
+        # print("-" * 50)
 
         return config
 

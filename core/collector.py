@@ -408,10 +408,7 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
 
     # 使用正则表达式解析输出
     match = re.search(task.parse.regex, output)
-    print("-" * 50)
-    print(output)
-    print(task.parse.regex)
-    print("-" * 50)
+    
     if not match:
         logger.warning(f"任务 {task.alias} 的正则未匹配到任何内容, 不存储结果。")
         return None  # 匹配失败时返回None, 表示不存储
