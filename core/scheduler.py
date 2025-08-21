@@ -42,7 +42,7 @@ class TaskScheduler:
             # 准备写入内容, 包含时间戳和任务信息
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             content_lines = [
-                f"============ {timestamp} ============",
+                f"================= {timestamp} =================",
                 f"Task: {task.alias}",
                 f"Device: {device.name} ({device.ip})",
                 f"Protocol: {task.protocol}",
