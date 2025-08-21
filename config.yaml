@@ -70,8 +70,9 @@ tasks:
     mode: delay
     seconds: 120
   parse:
-    regex: Branch point:\s*(\d+)
+    regex: (?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)
   labels:
+  - BIOS_Version
   - Branch_Point
   storage: sqlite
   targets:
