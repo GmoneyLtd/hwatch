@@ -44,13 +44,13 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
                 # 尝试发送一个简单的命令来验证连接
                 try:
                     await asyncio.wait_for(conn.run("echo test", check=True), timeout=2)
-                    # 连接有效，更新最后使用时间
+                    # 连接有效, 更新最后使用时间
                     conn_entry["last_used"] = time.time()
                     logger.debug(f"[SSH] 复用现有连接: {task.alias} on {device.name}")
                     return conn
                 except Exception as test_e:
                     logger.debug(f"[SSH] 连接测试失败: {task.alias} on {device.name} - {test_e}")
-                    raise Exception("连接测试失败")
+                    raise Exception("连接测试失败") from None
             else:
                 raise Exception("连接状态检查失败")
         except Exception:
