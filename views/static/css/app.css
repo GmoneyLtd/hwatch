@@ -360,7 +360,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
-    margin-bottom: 50px;
+    margin-bottom: 20px;
     padding: 8px 6px;
     background: var(--color-secondary);
     border-radius: 6px;
