@@ -79,7 +79,7 @@ body {
 /* Header */
 .app-header {
     background: #ffffff;
-    
+
     position: sticky;
     top: 0;
     z-index: 100;
@@ -107,7 +107,7 @@ body {
     background: #ffffff;
     border-radius: 2px;
     overflow: hidden;
-    
+
     position: relative;
 }
 
@@ -181,15 +181,20 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .view-content {
     background: #ffffff;
     border-radius: 2px;
     padding: 10px 2px 20px;
-    
+
     border: 1px solid var(--color-light-gray);
 }
 
@@ -221,7 +226,8 @@ body {
 
 .data-table th:nth-last-child(-n+2),
 .data-table td:nth-last-child(-n+2) {
-    width: 120px; /* Adjust as needed */
+    width: 120px;
+    /* Adjust as needed */
     text-align: center;
 }
 
@@ -234,12 +240,12 @@ body {
     letter-spacing: 0.5px;
 }
 
-.data-table th > div {
+.data-table th>div {
     display: flex;
     align-items: center;
 }
 
-.data-table th:nth-last-child(-n+2) > div {
+.data-table th:nth-last-child(-n+2)>div {
     justify-content: center;
 }
 
@@ -504,6 +510,14 @@ body {
     margin-right: 6px;
 }
 
+/* Chart页面下拉菜单字体样式 */
+#chart-view .dropdown-toggle,
+#chart-view .dropdown-item,
+#chart-view .dropdown-item label {
+    font-family: "CeraRoundPro-Regular", BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    align-items: center;
+}
+
 .device-count {
     font-size: 0.8em;
     opacity: 0.8;
@@ -523,7 +537,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 5px 10px; /* Increased padding for more height */
+    padding: 5px 10px;
+    /* Increased padding for more height */
     border-bottom: 1px solid var(--color-light-gray);
     transition: background-color 0.2s ease;
 }
@@ -533,7 +548,8 @@ body {
 }
 
 .file-list li:hover {
-    background-color: var(--color-secondary); /* Light background on hover */
+    background-color: var(--color-secondary);
+    /* Light background on hover */
 }
 
 .file-list li .file-info {
@@ -543,13 +559,16 @@ body {
     flex-basis: 0;
     flex-grow: 1;
     display: grid;
-    grid-template-columns: auto 2fr 1fr 1fr; /* Icon, Name, Size, Created At */
+    grid-template-columns: auto 2fr 1fr 1fr;
+    /* Icon, Name, Size, Created At */
     align-items: center;
-    gap: 10px; /* Space between columns */
+    gap: 10px;
+    /* Space between columns */
 }
 
 .file-list li .file-info .material-symbols-outlined {
-    margin-right: 0; /* Handled by grid gap */
+    margin-right: 0;
+    /* Handled by grid gap */
     color: var(--color-medium-gray);
 }
 
@@ -564,17 +583,20 @@ body {
 .file-list li .file-size {
     font-size: 0.85em;
     color: var(--color-medium-gray);
-    justify-self: left; /* Center content horizontally */
+    justify-self: left;
+    /* Center content horizontally */
 }
 
 .file-list li .file-created-at {
     font-size: 0.85em;
     color: var(--color-medium-gray);
-    justify-self: left; /* Center content horizontally */
+    justify-self: left;
+    /* Center content horizontally */
 }
 
 .file-list li .file-actions {
-    flex-shrink: 0; /* Prevent actions from shrinking */
+    flex-shrink: 0;
+    /* Prevent actions from shrinking */
     margin-left: 15px;
 }
 
@@ -584,28 +606,28 @@ body {
         font-size: 1.2rem;
         padding: 15px;
     }
-    
+
     .nav-btn span {
         display: none;
     }
-    
+
     .nav-btn .material-symbols-outlined {
         margin-right: 0;
     }
-    
+
     .data-table {
         font-size: 14px;
     }
-    
+
     .data-table th,
     .data-table td {
         padding: 12px 10px;
     }
-    
+
     .chart-filters {
         grid-template-columns: 1fr;
     }
-    
+
     .filter-group {
         flex-direction: row;
     }
@@ -623,7 +645,8 @@ body {
 .login-header h1 {
     font-size: 24px;
     font-weight: 500;
-    display: inline-block; /* To respect text-align: center */
+    display: inline-block;
+    /* To respect text-align: center */
 }
 
 .login-container {
@@ -650,8 +673,10 @@ body {
 }
 
 .login-icon {
-    font-size: 32px !important; /* Use important to override the default 24px */
-    height: 32px; /* Match size */
+    font-size: 32px !important;
+    /* Use important to override the default 24px */
+    height: 32px;
+    /* Match size */
 }
 
 .login-box .form-group {
