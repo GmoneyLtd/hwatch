@@ -196,35 +196,35 @@ async def save_config(request: Request, user: dict = current_user_dependency):
 
 @app.get("/api/chart")
 async def get_chart_data_api(
-    task_alias: str = None,
-    start: str = None,
-    end: str = None,
-    devices: str = None,
+    task_alias: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    devices: str | None = None,
     user: dict = current_user_dependency,
 ):
     if not user:
         raise HTTPException(status_code=401)
 
-    # 解析时间参数，如果没有提供则使用默认时间范围（最近2小时）
+    # 解析时间参数, 如果没有提供则使用默认时间范围(最近2小时)
     if start and end:
         try:
             start_date = datetime.fromisoformat(start)
             end_date = datetime.fromisoformat(end)
         except ValueError:
-            # 如果时间格式无效，使用默认时间范围（最近2小时）
+            # 如果时间格式无效, 使用默认时间范围(最近2小时)
             end_date = datetime.now()
             start_date = end_date - timedelta(hours=2)
     else:
-        # 默认时间范围：最近2小时
+        # 默认时间范围: 最近2小时
         end_date = datetime.now()
         start_date = end_date - timedelta(hours=2)
 
     # 获取任务列表 - 基于指定时间区间内实际存在数据的任务
     tasks = await get_available_tasks(start_date, end_date)
 
-    # 获取设备列表的逻辑：
-    # 1. 如果没有选择任务，设备列表为空
-    # 2. 如果选择了任务，获取该任务在指定时间区间内的设备列表
+    # 获取设备列表的逻辑:
+    # 1. 如果没有选择任务, 设备列表为空
+    # 2. 如果选择了任务, 获取该任务在指定时间区间内的设备列表
     if task_alias:
         available_devices = await get_available_devices(start_date, end_date, task_alias)
     else:
@@ -241,7 +241,7 @@ async def get_chart_data_api(
         "datasets": [],
     }
 
-    # 只有当选择了任务、设备和时间时，才查询图表数据
+    # 只有当选择了任务、设备和时间时, 才查询图表数据
     if task_alias and selected_devices and start and end:
         # 获取原始数据
         raw_data = await get_chart_data(task_alias, start_date, end_date)
