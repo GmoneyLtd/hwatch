@@ -154,7 +154,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     function timeInputChangeHandler() {
+        // 时间变化时，清空任务和设备选择
+        clearTaskAndDeviceSelection();
         loadChartData();
+    }
+
+    function clearTaskAndDeviceSelection() {
+        // 清空任务选择
+        document.getElementById('chart-task').value = '';
+        taskDropdownToggle.textContent = 'Select Task';
+
+        // 清空设备选择
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        if (dropdownMenu) {
+            const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            updateDeviceCount();
+        }
     }
 
     function deviceChangeHandler(event) {

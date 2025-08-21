@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import aiosqlite
@@ -53,16 +53,23 @@ async def save_result(task_alias: str, device_name: str, results: dict[str, Any]
         logger.error(f"保存任务结果到数据库失败 (任务: {task_alias}): {e}")
 
 
-async def get_available_tasks() -> list[str]:
+async def get_available_tasks(start_date: datetime, end_date: datetime) -> list[str]:
     """
-    获取数据库中实际存在数据的任务列表。
+    获取数据库中指定时间区间内有数据的任务列表。
+
+    Args:
+        start_date (datetime): 查询开始时间
+        end_date (datetime): 查询结束时间
 
     Returns:
         List[str]: 包含数据的任务别名列表。
     """
     try:
         async with aiosqlite.connect(DB_FILE) as db:
-            cursor = await db.execute("SELECT DISTINCT task_alias FROM task_results ORDER BY task_alias")
+            cursor = await db.execute(
+                "SELECT DISTINCT task_alias FROM task_results WHERE timestamp BETWEEN ? AND ? ORDER BY task_alias",
+                (start_date, end_date),
+            )
             rows = await cursor.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
@@ -70,16 +77,32 @@ async def get_available_tasks() -> list[str]:
         return []
 
 
-async def get_available_devices() -> list[str]:
+async def get_available_devices(start_date: datetime, end_date: datetime, task_alias: str = None) -> list[str]:
     """
-    获取数据库中实际存在数据的设备列表。
+    获取数据库中指定时间区间内有数据的设备列表。
+
+    Args:
+        start_date (datetime): 查询开始时间
+        end_date (datetime): 查询结束时间
+        task_alias (str, optional): 指定任务别名，如果提供则只返回该任务的设备
 
     Returns:
         List[str]: 包含数据的设备名称列表。
     """
     try:
         async with aiosqlite.connect(DB_FILE) as db:
-            cursor = await db.execute("SELECT DISTINCT device_name FROM task_results ORDER BY device_name")
+            if task_alias:
+                # 如果指定了任务，只返回该任务在指定时间区间内的设备
+                cursor = await db.execute(
+                    "SELECT DISTINCT device_name FROM task_results WHERE timestamp BETWEEN ? AND ? AND task_alias = ? ORDER BY device_name",
+                    (start_date, end_date, task_alias),
+                )
+            else:
+                # 如果没有指定任务，返回所有设备
+                cursor = await db.execute(
+                    "SELECT DISTINCT device_name FROM task_results WHERE timestamp BETWEEN ? AND ? ORDER BY device_name",
+                    (start_date, end_date),
+                )
             rows = await cursor.fetchall()
             return [row[0] for row in rows]
     except Exception as e:

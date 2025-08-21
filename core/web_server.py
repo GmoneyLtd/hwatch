@@ -205,15 +205,30 @@ async def get_chart_data_api(
     if not user:
         raise HTTPException(status_code=401)
 
-    config: AppConfig = app_state.get("config")
-    if not config:
-        return {"tasks": [], "available_devices": [], "selected_devices": [], "datasets": []}
+    # 解析时间参数，如果没有提供则使用默认时间范围（最近2小时）
+    if start and end:
+        try:
+            start_date = datetime.fromisoformat(start)
+            end_date = datetime.fromisoformat(end)
+        except ValueError:
+            # 如果时间格式无效，使用默认时间范围（最近2小时）
+            end_date = datetime.now()
+            start_date = end_date - timedelta(hours=2)
+    else:
+        # 默认时间范围：最近2小时
+        end_date = datetime.now()
+        start_date = end_date - timedelta(hours=2)
 
-    # 获取任务列表 - 基于数据库中实际存在数据的任务
-    tasks = await get_available_tasks()
+    # 获取任务列表 - 基于指定时间区间内实际存在数据的任务
+    tasks = await get_available_tasks(start_date, end_date)
 
-    # 获取设备列表 - 基于数据库中实际存在数据的设备
-    all_devices = await get_available_devices()
+    # 获取设备列表的逻辑：
+    # 1. 如果没有选择任务，设备列表为空
+    # 2. 如果选择了任务，获取该任务在指定时间区间内的设备列表
+    if task_alias:
+        available_devices = await get_available_devices(start_date, end_date, task_alias)
+    else:
+        available_devices = []
 
     # 解析选中的设备
     selected_devices = devices.split(",") if devices else []
@@ -221,19 +236,13 @@ async def get_chart_data_api(
     # 构建基础响应数据
     response_data = {
         "tasks": tasks,
-        "available_devices": all_devices,
+        "available_devices": available_devices,
         "selected_devices": selected_devices,
         "datasets": [],
     }
 
-    # 如果提供了具体参数，则查询图表数据
-    if task_alias and start and end:
-        try:
-            start_date = datetime.fromisoformat(start)
-            end_date = datetime.fromisoformat(end)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="日期格式无效,请使用ISO格式。") from None
-
+    # 只有当选择了任务、设备和时间时，才查询图表数据
+    if task_alias and selected_devices and start and end:
         # 获取原始数据
         raw_data = await get_chart_data(task_alias, start_date, end_date)
 
@@ -244,7 +253,7 @@ async def get_chart_data_api(
             device_data = {}
             for row in raw_data:
                 device = row["device_name"]
-                if selected_devices and device not in selected_devices:
+                if device not in selected_devices:
                     continue
 
                 if device not in device_data:
