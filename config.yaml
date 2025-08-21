@@ -20,11 +20,11 @@ devices:
       retry: 0
       timeout: 2
     ssh:
+      password: ChengduMicro@2025
       port: 22
       retry: 0
       timeout: 2
       username: admin
-      password: ChengduMicro@2025
   ip: 192.168.2.1
   name: Fortinet_60
 - connection:
@@ -59,9 +59,10 @@ tasks:
   targets:
   - Fortinet_60
   type: snmpwalk
-- alias: run_router_a_tech_support
+- alias: run_show_command
   command:
   - get system status
+  - get system arp
   enabled: true
   protocol: ssh
   schedule:
