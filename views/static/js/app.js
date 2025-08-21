@@ -371,10 +371,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     },
                     axisLabel: {
-                        formatter: function (value) {
-                            const date = new Date(value);
-                            return echarts.format.formatTime('yyyy-MM-dd HH:mm:ss', date);
-                        }
+                        formatter: '{yyyy}-{MM}-{dd} {HH}:{mm}:{ss}'
                     }
                 },
                 yAxis: {
