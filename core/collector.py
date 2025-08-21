@@ -182,7 +182,9 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
             raise Exception("命令执行失败, 但没有具体的异常信息")
 
     except Exception as e:
-        logger.error(f"[SSH] 任务 {task.alias} on {device.name} 执行失败: {e}")
+        error_msg = f"[SSH] 任务 {task.alias} on {device.name} 执行失败: {e}"
+        logger.error(error_msg)
+        logger.error(f"[SSH] 详细错误信息 - 设备IP: {device.ip}, 命令: {command}, 异常类型: {type(e).__name__}")
         # 从连接池中移除失效连接
         pool_key = (task.alias, device.name)
         _ssh_connection_pools.pop(pool_key, None)

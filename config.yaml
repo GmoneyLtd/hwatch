@@ -61,7 +61,7 @@ tasks:
   type: snmpwalk
 - alias: run_router_a_tech_support
   command:
-  - show
+  - get system status
   enabled: true
   protocol: ssh
   schedule:
