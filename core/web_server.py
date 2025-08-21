@@ -194,7 +194,7 @@ async def save_config(request: Request, user: dict = current_user_dependency):
         raise HTTPException(status_code=500, detail="无法写入配置文件") from None
 
 
-@app.get("/api/chart_data")
+@app.get("/api/chart")
 async def get_chart_data_api(task_alias: str, start: str, end: str, user: dict = current_user_dependency):
     if not user:
         raise HTTPException(status_code=401)
