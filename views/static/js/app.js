@@ -371,12 +371,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     },
                     axisLabel: {
-                        formatter: '{yyyy}-{MM}-{dd} {HH}:{mm}:{ss}'
+                        formatter: '{yyyy}-{MM}-{dd}\n{HH}:{mm}:{ss}'
                     }
                 },
                 yAxis: {
                     type: 'value',
-                    min: 0,
+                    scale: true,
                     axisLine: {
                         show: true,
                         lineStyle: {
