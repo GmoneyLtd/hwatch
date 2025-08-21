@@ -131,8 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 时间选择改变时触发数据加载
         const timeInputs = document.querySelectorAll('#chart-start, #chart-end');
         timeInputs.forEach(input => {
-            // 移除已有的事件监听器（防止重复绑定）
-            input.removeEventListener('change', timeInputChangeHandler);
+            // 添加事件监听器
             input.addEventListener('change', timeInputChangeHandler);
         });
 
@@ -172,13 +171,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 cb.checked = false;
             });
             updateDeviceCount();
-        }
-    }
-
-    function deviceChangeHandler(event) {
-        if (event.target.name === 'devices') {
-            updateDeviceCount();
-            loadChartData();
         }
     }
 
@@ -361,13 +353,6 @@ document.addEventListener('DOMContentLoaded', function () {
             ul.appendChild(li);
         });
         outfileListDiv.appendChild(ul);
-
-        // Add event listener for download buttons (delegated)
-        outfileListDiv.addEventListener('click', (event) => {
-            if (event.target.classList.contains('btn-primary')) {
-                console.log('Download button clicked for:', event.target.download);
-            }
-        });
     }
 
     function updateChart(data) {
