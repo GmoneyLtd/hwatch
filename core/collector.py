@@ -142,69 +142,93 @@ async def _cleanup_ssh_connections():
 
 
 async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
-    """执行单个SSH采集任务。"""
+    """执行单个SSH采集任务, 支持顺序执行多个命令。"""
     conn_details = device.connection.ssh
-    # 获取命令, 如果是列表则取第一个命令
-    command = task.command[0] if isinstance(task.command, list) and task.command else ""
-    logger.info(f"[SSH] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - Command: {command}")
+
+    # 处理命令列表
+    commands = []
+    if isinstance(task.command, list):
+        commands = [cmd for cmd in task.command if cmd.strip()]  # 过滤空命令
+    elif isinstance(task.command, str):
+        commands = [task.command.strip()] if task.command.strip() else []
+
+    if not commands:
+        logger.warning(f"[SSH] 任务 {task.alias} 没有有效的命令")
+        return "ERROR: 没有有效的命令"
+
+    logger.info(f"[SSH] 开始执行任务 {task.alias} on {device.name} ({device.ip}) - 命令数量: {len(commands)}")
+
     try:
         # 获取SSH连接(从连接池或新建)
         conn = await _get_ssh_connection(task, device)
 
-        # 执行命令(带重试机制)
-        last_exception = None
-        retry = conn_details.retry if conn_details else 3
-        for attempt in range(retry + 1):
-            try:
-                # 获取命令, 如果是列表则取第一个命令
-                command = task.command[0] if isinstance(task.command, list) and task.command else ""
-                timeout = conn_details.timeout if conn_details else 10
-                result = await asyncio.wait_for(conn.run(command, check=True), timeout=timeout)
-                if attempt > 0:
-                    logger.info(f"[SSH] 命令 {task.alias} on {device.name} 在第 {attempt + 1} 次尝试后成功执行")
-                logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name}")
-                # 确保返回的是 str 类型
-                stdout = result.stdout
-                if isinstance(stdout, bytes):
-                    stdout = stdout.decode("utf-8", errors="replace")
-                return stdout or ""
-            except TimeoutError:
-                # 确保conn_details不为None
-                timeout = conn_details.timeout if conn_details else 10
-                retry = conn_details.retry if conn_details else 3
+        # 存储所有命令的执行结果
+        all_results = []
 
-                last_exception = Exception(f"命令执行超时 ({timeout} 秒)")
-                if attempt < retry:
-                    wait_time = 2**attempt
-                    logger.warning(
-                        f"[SSH] 命令 {task.alias} on {device.name} 第 {attempt + 1} 次执行超时. 等待 {wait_time} 秒后重试..."
-                    )
-                    await asyncio.sleep(wait_time)
-                else:
-                    logger.error(f"[SSH] 命令 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然超时")
-            except Exception as e:
-                last_exception = e
-                # 确保conn_details不为None
-                retry = conn_details.retry if conn_details else 3
-                if attempt < retry:
-                    wait_time = 2**attempt
-                    logger.warning(
-                        f"[SSH] 命令 {task.alias} on {device.name} 第 {attempt + 1} 次执行失败: {e}. 等待 {wait_time} 秒后重试..."
-                    )
-                    await asyncio.sleep(wait_time)
-                else:
-                    logger.error(f"[SSH] 命令 {task.alias} on {device.name} 在 {attempt + 1} 次尝试后仍然失败: {e}")
+        # 顺序执行每个命令
+        for cmd_index, command in enumerate(commands, 1):
+            logger.info(f"[SSH] 执行命令 {cmd_index}/{len(commands)}: {command}")
 
-        # 如果所有尝试都失败了, 抛出最后一个异常
-        if last_exception:
-            raise last_exception
-        else:
-            raise Exception("命令执行失败, 但没有具体的异常信息")
+            # 执行单个命令(带重试机制)
+            last_exception = None
+            retry = conn_details.retry if conn_details else 3
+            command_success = False
+
+            for attempt in range(retry + 1):
+                try:
+                    timeout = conn_details.timeout if conn_details else 10
+                    result = await asyncio.wait_for(conn.run(command, check=True), timeout=timeout)
+
+                    if attempt > 0:
+                        logger.info(f"[SSH] 命令 {cmd_index} 在第 {attempt + 1} 次尝试后成功执行")
+
+                    # 确保返回的是 str 类型
+                    stdout = result.stdout
+                    if isinstance(stdout, bytes):
+                        stdout = stdout.decode("utf-8", errors="replace")
+
+                    all_results.append(f"Command {cmd_index}: {command}\n{stdout or ''}")
+                    command_success = True
+                    break
+
+                except TimeoutError:
+                    timeout = conn_details.timeout if conn_details else 10
+                    last_exception = Exception(f"命令执行超时 ({timeout} 秒)")
+                    if attempt < retry:
+                        wait_time = 2**attempt
+                        logger.warning(
+                            f"[SSH] 命令 {cmd_index} 第 {attempt + 1} 次执行超时. 等待 {wait_time} 秒后重试..."
+                        )
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logger.error(f"[SSH] 命令 {cmd_index} 在 {attempt + 1} 次尝试后仍然超时")
+
+                except Exception as e:
+                    last_exception = e
+                    if attempt < retry:
+                        wait_time = 2**attempt
+                        logger.warning(
+                            f"[SSH] 命令 {cmd_index} 第 {attempt + 1} 次执行失败: {e}. 等待 {wait_time} 秒后重试..."
+                        )
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logger.error(f"[SSH] 命令 {cmd_index} 在 {attempt + 1} 次尝试后仍然失败: {e}")
+
+            # 如果当前命令执行失败, 记录错误但继续执行下一个命令
+            if not command_success:
+                error_msg = f"Command {cmd_index}: {command}\nERROR: {last_exception}"
+                all_results.append(error_msg)
+                logger.warning(f"[SSH] 命令 {cmd_index} 执行失败, 继续执行下一个命令")
+
+        # 合并所有命令的结果
+        final_result = "\n\n".join(all_results)
+        logger.success(f"[SSH] 成功完成任务 {task.alias} on {device.name} - 执行了 {len(commands)} 个命令")
+        return final_result
 
     except Exception as e:
         error_msg = f"[SSH] 任务 {task.alias} on {device.name} 执行失败: {e}"
         logger.error(error_msg)
-        logger.error(f"[SSH] 详细错误信息 - 设备IP: {device.ip}, 命令: {command}, 异常类型: {type(e).__name__}")
+        logger.error(f"[SSH] 详细错误信息 - 设备IP: {device.ip}, 异常类型: {type(e).__name__}")
         # 从连接池中移除失效连接
         pool_key = (task.alias, device.name)
         _ssh_connection_pools.pop(pool_key, None)
