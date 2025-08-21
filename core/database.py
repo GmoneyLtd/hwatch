@@ -77,14 +77,14 @@ async def get_available_tasks(start_date: datetime, end_date: datetime) -> list[
         return []
 
 
-async def get_available_devices(start_date: datetime, end_date: datetime, task_alias: str = None) -> list[str]:
+async def get_available_devices(start_date: datetime, end_date: datetime, task_alias: str | None = None) -> list[str]:
     """
     获取数据库中指定时间区间内有数据的设备列表。
 
     Args:
         start_date (datetime): 查询开始时间
         end_date (datetime): 查询结束时间
-        task_alias (str, optional): 指定任务别名，如果提供则只返回该任务的设备
+        task_alias (str, optional): 指定任务别名, 如果提供则只返回该任务的设备
 
     Returns:
         List[str]: 包含数据的设备名称列表。
@@ -92,13 +92,13 @@ async def get_available_devices(start_date: datetime, end_date: datetime, task_a
     try:
         async with aiosqlite.connect(DB_FILE) as db:
             if task_alias:
-                # 如果指定了任务，只返回该任务在指定时间区间内的设备
+                # 如果指定了任务, 只返回该任务在指定时间区间内的设备
                 cursor = await db.execute(
                     "SELECT DISTINCT device_name FROM task_results WHERE timestamp BETWEEN ? AND ? AND task_alias = ? ORDER BY device_name",
                     (start_date, end_date, task_alias),
                 )
             else:
-                # 如果没有指定任务，返回所有设备
+                # 如果没有指定任务, 返回所有设备
                 cursor = await db.execute(
                     "SELECT DISTINCT device_name FROM task_results WHERE timestamp BETWEEN ? AND ? ORDER BY device_name",
                     (start_date, end_date),
