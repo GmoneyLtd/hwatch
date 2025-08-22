@@ -535,6 +535,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 yAxis: {
                     type: 'value',
                     scale: true,
+                    min: function (value) {
+                        // 简单逻辑：取最小值的10%然后取整
+                        if (value.min === 0) {
+                            return -1; // 最小值为0时设为-1，留出空间但不显示-1刻度
+                        }
+
+                        const minOffset = Math.floor(value.min * 0.9); // 取最小值的90%并向下取整
+                        return minOffset;
+                    },
+                    axisLabel: {
+                        formatter: function (value) {
+                            // 不显示负值刻度
+                            if (value < 0) {
+                                return '';
+                            }
+                            return value;
+                        }
+                    },
                     axisLine: {
                         show: true,
                         lineStyle: {
