@@ -6,7 +6,7 @@ import uvicorn
 from loguru import logger
 
 from core.config_loader import AppConfig, load_config
-from core.database import init_db
+from core.database import close_db, init_db
 from core.scheduler import TaskScheduler
 
 # 导入核心模块
@@ -104,6 +104,7 @@ async def main():
     finally:
         # 优雅关闭
         scheduler.stop()
+        await close_db()
         logger.info("Hwatch 应用已关闭。")
 
 

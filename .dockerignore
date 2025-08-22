@@ -35,6 +35,7 @@ ENV/
 *.swp
 *.swo
 .codebuddy/
+.qoder/
 
 
 # 日志和输出文件
