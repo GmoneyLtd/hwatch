@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 grid: {
                     left: '3%',
                     right: '3%',
-                    bottom: '5%', // 增加底部空间以便更好地显示x轴标签
+                    bottom: '3%', // 增加底部空间以便更好地显示x轴标签
                     containLabel: true
                 },
                 legend: {

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hwatch - Play Login</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/hwatch.svg">
     <link rel="stylesheet" href="/static/css/app.css">
 </head>
 
