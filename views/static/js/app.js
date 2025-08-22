@@ -283,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${task.protocol || 'N/A'}</td>
                 <td>${task.schedule_seconds || 'N/A'}</td>
                 <td>${task.schedule_mode || 'N/A'}</td>
+                <td>${task.storage || 'null'}</td>
                 <td>
                     <span class="status-badge ${task.enabled ? 'enabled' : 'disabled'}">
                         <i class="fas ${task.enabled ? 'fa-check-circle' : 'fa-times-circle'}"></i>

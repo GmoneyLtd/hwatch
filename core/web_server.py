@@ -316,6 +316,7 @@ async def get_tasks(user: dict = current_user_dependency):
             "type": task.type or "N/A",
             "schedule_mode": task.schedule.mode or "run_once",
             "schedule_seconds": task.schedule.seconds or 0,
+            "storage": task.storage or "null",
             "enabled": task.enabled,
         })
     return task_list
