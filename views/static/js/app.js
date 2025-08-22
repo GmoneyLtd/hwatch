@@ -437,16 +437,17 @@ document.addEventListener('DOMContentLoaded', function () {
                             readOnly: true,
                             lang: ['Data View', 'Close', 'Refresh'],
                             optionToContent: function (opt) {
-                                // 自定义数据视图内容
-                                let table = '<table style="width:100%;text-align:center;border-collapse:collapse;"><tbody>';
+                                // 自定义数据视图内容，复用CSS中的.data-table样式
+                                let table = '<table class="data-table"><thead>';
 
                                 // 表头
-                                table += '<tr style="background-color:#f5f5f5;font-weight:bold;">';
-                                table += '<td style="padding:8px;border:1px solid #ddd;">Time</td>';
+                                table += '<tr>';
+                                table += '<th>Time</th>';
                                 opt.series.forEach(series => {
-                                    table += `<td style="padding:8px;border:1px solid #ddd;">${series.name}</td>`;
+                                    table += `<th>${series.name}</th>`;
                                 });
                                 table += '</tr>';
+                                table += '</thead><tbody>';
 
                                 // 收集所有时间点
                                 const timePoints = new Set();
@@ -470,12 +471,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                         String(date.getSeconds()).padStart(2, '0');
 
                                     table += '<tr>';
-                                    table += `<td style="padding:8px;border:1px solid #ddd;">${formattedTime}</td>`;
+                                    table += `<td>${formattedTime}</td>`;
 
                                     opt.series.forEach(series => {
                                         const point = series.data.find(p => p[0] === timestamp);
                                         const value = point ? point[1] : '';
-                                        table += `<td style="padding:8px;border:1px solid #ddd;">${value}</td>`;
+                                        table += `<td>${value}</td>`;
                                     });
 
                                     table += '</tr>';
