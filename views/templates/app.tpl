@@ -115,6 +115,7 @@
                     
                     <div class="chart-container">
                         <div id="data-chart" style="width: 100%; height: 500px;"></div>
+                        <!-- 图表工具箱将通过ECharts配置自动添加 -->
                     </div>
                 </div>
             </section>

@@ -346,17 +346,100 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateChart(data) {
         if (dataChart) {
+            // 准备CSV下载功能
+            const downloadCSV = function () {
+                let csvContent = "data:text/csv;charset=utf-8,";
+
+                // 添加CSV头部
+                const headers = ["Timestamp", "Formatted Time"];
+                data.datasets.forEach(dataset => {
+                    headers.push(dataset.label);
+                });
+                csvContent += headers.join(",") + "\r\n";
+
+                // 创建时间点的集合
+                const timePoints = new Set();
+                data.datasets.forEach(dataset => {
+                    dataset.data.forEach(point => {
+                        timePoints.add(point.x);
+                    });
+                });
+
+                // 按时间排序
+                const sortedTimePoints = Array.from(timePoints).sort();
+
+                // 为每个时间点创建一行数据
+                sortedTimePoints.forEach(timestamp => {
+                    const date = new Date(timestamp);
+                    const formattedTime = date.toLocaleString();
+                    let row = [timestamp, formattedTime];
+
+                    data.datasets.forEach(dataset => {
+                        const point = dataset.data.find(p => p.x === timestamp);
+                        row.push(point ? point.y : "");
+                    });
+
+                    csvContent += row.join(",") + "\r\n";
+                });
+
+                // 创建下载链接
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "chart_data.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
             const option = {
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: {
                         type: 'cross'
+                    },
+                    formatter: function (params) {
+                        const date = new Date(params[0].value[0]);
+                        let formattedDate = date.toLocaleDateString();
+                        let formattedTime = date.toLocaleTimeString();
+
+                        let result = `<div style="font-weight:bold;margin-bottom:5px;">${formattedDate} ${formattedTime}</div>`;
+
+                        params.forEach(param => {
+                            result += `<div style="margin: 3px 0">
+                                <span style="display:inline-block;margin-right:5px;border-radius:50%;width:10px;height:10px;background-color:${param.color}"></span>
+                                ${param.seriesName}: ${param.value[1]}
+                            </div>`;
+                        });
+
+                        return result;
                     }
+                },
+                toolbox: {
+                    feature: {
+                        saveAsImage: {
+                            title: 'Save as Image',
+                            name: 'chart_data'
+                        },
+                        dataView: {
+                            title: 'Data View',
+                            readOnly: true,
+                            lang: ['Data View', 'Close', 'Refresh']
+                        },
+                        myTool1: {
+                            show: true,
+                            title: 'Download CSV',
+                            icon: 'path://M4.7,22.9L29.3,45.5L54.7,23.4M4.6,43.6L4.6,58L53.8,58L53.8,43.6M29.2,45.1L29.2,0',
+                            onclick: downloadCSV
+                        }
+                    },
+                    right: '5%',
+                    top: '5%'
                 },
                 grid: {
                     left: '3%',
                     right: '3%',
-                    bottom: '3%',
+                    bottom: '5%', // 增加底部空间以便更好地显示x轴标签
                     containLabel: true
                 },
                 legend: {
@@ -371,7 +454,23 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     },
                     axisLabel: {
-                        formatter: '{yyyy}-{MM}-{dd}\n{HH}:{mm}:{ss}'
+                        formatter: function (value) {
+                            const date = new Date(value);
+                            return date.toLocaleDateString() + '\n' + date.toLocaleTimeString();
+                        },
+                        interval: 'auto',
+                        rotate: 0,
+                        margin: 12,
+                        textStyle: {
+                            fontSize: 11
+                        }
+                    },
+                    splitLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'dashed',
+                            opacity: 0.3
+                        }
                     }
                 },
                 yAxis: {
@@ -382,15 +481,26 @@ document.addEventListener('DOMContentLoaded', function () {
                         lineStyle: {
                             color: '#333'
                         }
+                    },
+                    splitLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'dashed',
+                            opacity: 0.3
+                        }
                     }
                 },
                 series: data.datasets.map(dataset => ({
                     name: dataset.label,
                     type: 'line',
                     data: dataset.data.map(item => [item.x, item.y]),
-                    showSymbol: false,
+                    showSymbol: true,
+                    symbolSize: 5,
                     emphasis: {
-                        focus: 'series'
+                        focus: 'series',
+                        itemStyle: {
+                            borderWidth: 2
+                        }
                     }
                 }))
             };
@@ -610,6 +720,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     }
+
+    // Add event listener for window resize to adjust chart size
+    window.addEventListener('resize', function () {
+        if (dataChart) {
+            dataChart.resize();
+        }
+    });
 
     setupDropdown('taskDropdown', 'taskDropdownToggle', 'taskDropdownMenu');
     setupDropdown('deviceDropdown', 'dropdownToggle', 'dropdownMenu');
