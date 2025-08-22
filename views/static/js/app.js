@@ -508,6 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     type: 'time',
                     axisLine: {
                         show: true,
+                        onZero: false, // X轴与Y轴的最小值相交，而不是与0相交
                         lineStyle: {
                             color: '#333'
                         }
