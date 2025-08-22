@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initConfigView() {
         if (!configEditor) {
             configEditor = ace.edit(configEditorElement);
-            configEditor.setTheme('ace/theme/github');
+            configEditor.setTheme('ace/theme/cloud_editor');
             configEditor.session.setMode('ace/mode/yaml');
             configEditor.setOptions({
                 showPrintMargin: false,
