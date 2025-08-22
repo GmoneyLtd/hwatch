@@ -226,6 +226,67 @@ async def root(request: Request, user: dict = current_user_dependency):
 # --- API routes ---
 
 
+@app.get("/api/healthz")
+async def health_check():
+    """Health check endpoint for container health probing.
+
+    This endpoint verifies the health of essential application components:
+    - Database connectivity
+    - Configuration loading
+    - Scheduler status
+
+    Returns:
+        dict: Health status with details of each component
+    """
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "checks": {"database": "unknown", "config": "unknown", "scheduler": "unknown"},
+    }
+
+    # Check database connectivity
+    try:
+        from core.database import _get_connection
+
+        conn = await _get_connection()
+        # Simple query to verify database is accessible
+        async with conn.execute("SELECT 1") as cursor:
+            await cursor.fetchone()
+        health_status["checks"]["database"] = "healthy"
+    except Exception as e:
+        health_status["checks"]["database"] = f"unhealthy: {str(e)[:100]}"
+        health_status["status"] = "unhealthy"
+
+    # Check configuration loading
+    try:
+        config = app_state.get("config")
+        if config and hasattr(config, "devices") and hasattr(config, "tasks"):
+            health_status["checks"]["config"] = "healthy"
+        else:
+            health_status["checks"]["config"] = "unhealthy: configuration not loaded"
+            health_status["status"] = "unhealthy"
+    except Exception as e:
+        health_status["checks"]["config"] = f"unhealthy: {str(e)[:100]}"
+        health_status["status"] = "unhealthy"
+
+    # Check scheduler status
+    try:
+        scheduler = app_state.get("scheduler")
+        if scheduler and hasattr(scheduler, "scheduler") and scheduler.scheduler.running:
+            health_status["checks"]["scheduler"] = "healthy"
+        else:
+            health_status["checks"]["scheduler"] = "unhealthy: scheduler not running"
+            health_status["status"] = "unhealthy"
+    except Exception as e:
+        health_status["checks"]["scheduler"] = f"unhealthy: {str(e)[:100]}"
+        health_status["status"] = "unhealthy"
+
+    # Return appropriate HTTP status code
+    status_code = 200 if health_status["status"] == "healthy" else 503
+
+    return JSONResponse(content=health_status, status_code=status_code)
+
+
 @app.get("/api/tasks", response_model=list[dict[str, Any]])
 async def get_tasks(user: dict = current_user_dependency):
     if not user:
