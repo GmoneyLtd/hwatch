@@ -537,12 +537,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     type: 'value',
                     scale: true,
                     min: function (value) {
-                        //value.min是数据的最小值
-                        return Math.floor(value.min - (value.max - value.min) * 0.1)
+                        // 优化：减少重复计算，当值相同时直接返回
+                        return value.min === value.max ?
+                            Math.ceil(value.max * 0.9) :
+                            Math.floor(value.min - (value.max - value.min) * 0.1);
                     },
                     max: function (value) {
-                        // value.max是数据的最大值
-                        return Math.ceil(value.max + (value.max - value.min) * 0.1);
+                        // 优化：减少重复计算，当值相同时直接返回
+                        return value.min === value.max ?
+                            Math.floor(value.min * 1.1) :
+                            Math.ceil(value.max + (value.max - value.min) * 0.1);
                     },
                     axisLabel: {
                         formatter: function (value) {

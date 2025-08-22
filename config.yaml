@@ -63,7 +63,7 @@ tasks:
   command:
   - get system status
   - get system arp
-  enabled: true
+  enabled: false
   labels:
   - BIOS_Version
   - Branch_Point

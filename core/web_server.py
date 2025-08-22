@@ -60,7 +60,7 @@ def _get_background_color(border_color: str) -> str:
 
 # --- 全局变量与应用实例 ---
 
-app = FastAPI(title="Hwatch")
+app = FastAPI(title="Hwatch Play")
 
 
 # 添加访问日志中间件
