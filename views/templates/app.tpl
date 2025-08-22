@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="/static/css/app.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ace.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ext-language_tools.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ace.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.2/ext-language_tools.js"></script> -->
 </head>
 <body>
     <div class="app-container">
@@ -133,5 +133,8 @@
     </div>
 
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/ace.js"></script>
+    <script src="/static/js/ext-language_tools.js"></script>
+    <script src="/static/js/echarts.min.js"></script>
 </body>
 </html>
