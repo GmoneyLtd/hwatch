@@ -19,36 +19,36 @@ class TaskScheduler:
         self.config = config
         self.device_map = {device.name: device for device in config.devices}
         self.job_counts: dict[str, int] = {}
-        self.task_signatures: dict[str, str] = {}  # 存储任务签名用于对比
+        self.task_signatures: dict[str, str] = {}  # Store task signatures for comparison
 
     async def _execute_job(self, task: TaskConfig, device: DeviceConfig):
-        """实际执行单个作业的包装函数。"""
+        """Wrapper function for actually executing a single job."""
         job_id = f"{task.alias}_{device.name}"
-        # 记录任务开始时间
+        # Record task start time
         start_time = datetime.now()
-        logger.info(f"开始执行作业: {job_id}")
+        logger.info(f"Starting job execution: {job_id}")
 
-        # 运行采集任务
+        # Run collection task
         results = await run_task(task, device)
 
         if results is None:
-            logger.warning(f"作业 {job_id} 未返回结果 (可能被禁用、执行失败或匹配失败)。")
+            logger.warning(f"Job {job_id} returned no results (possibly disabled, execution failed, or match failed).")
             return
 
-        # 根据存储策略处理结果
+        # Process results based on storage strategy
         if task.storage == "sqlite":
             await save_result(task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"})
         elif task.storage == "file":
             outfile_dir = "outfile"
             os.makedirs(outfile_dir, exist_ok=True)
-            # 使用任务别名和设备名的组合作为文件名, 追加模式
+            # Use task alias and device name combination as filename, append mode
             file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
 
-            # 构建完整的文件内容
+            # Build complete file content
             start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
-            # 构建任务信息头部
+            # Build task information header
             header_lines = [
                 f"=================== {start_time_str} ===================",
                 f"Task: {task.alias}",
@@ -57,13 +57,13 @@ class TaskScheduler:
                 f"Type: {task.type}",
             ]
 
-            # 添加协议特定参数
+            # Add protocol-specific parameters
             if task.protocol == "ssh" and task.command:
                 header_lines.append(f"Command: {str(task.command)}")
             elif task.protocol == "snmp" and task.oid:
                 header_lines.append(f"OID: {task.oid}")
 
-            # 构建结果内容
+            # Build result content
             result_lines = ["Results:"]
             if "raw_output" in results:
                 result_lines.append(results["raw_output"])
@@ -71,31 +71,33 @@ class TaskScheduler:
                 for key, value in results.items():
                     result_lines.append(f"{key}: {value}")
 
-            # 构建结束标记
+            # Build end marker
             footer_lines = [
-                "",  # 空行分隔
+                "",  # Empty line separator
                 f"+------------------ {end_time_str} ------------------+",
                 "",
                 "",
                 "",
             ]
 
-            # 合并所有内容并写入文件
+            # Merge all content and write to file
             all_content = "\n".join(header_lines + result_lines + footer_lines)
             with open(file_path, "a", encoding="utf-8") as f:
                 f.write(all_content)
-            logger.info(f"作业 {job_id} 的结果已追加到 {file_path}")
+            logger.info(f"Job {job_id} results have been appended to {file_path}")
 
-        # 处理执行频率和 'delay' 模式的重调度
+        # Handle execution frequency and 'delay' mode rescheduling
         self.job_counts[job_id] = self.job_counts.get(job_id, 0) + 1
 
         schedule = task.schedule
-        # 如果有执行次数限制,且已达到次数,则停止
+        # If execution count limit exists and reached, stop
         if schedule.frequency > 0 and self.job_counts[job_id] >= schedule.frequency:
-            logger.info(f"作业 {job_id} 已达到其执行频率 {schedule.frequency} 次, 将不再调度。")
+            logger.info(
+                f"Job {job_id} has reached its execution frequency {schedule.frequency} times, will no longer be scheduled."
+            )
             return
 
-        # 如果是 delay 模式,需要在这里手动安排下一次执行
+        # If in delay mode, need to manually schedule next execution here
         if schedule.mode == "delay" and schedule.seconds is not None:
             next_run_time = datetime.now() + timedelta(seconds=schedule.seconds)
             self.scheduler.add_job(
@@ -105,17 +107,17 @@ class TaskScheduler:
                 args=[task, device],
                 id=f"{job_id}_adhoc_{self.job_counts[job_id]}",
             )
-            logger.info(f"作业 {job_id} (delay模式) 已安排下一次运行于 {next_run_time}")
+            logger.info(f"Job {job_id} (delay mode) has scheduled next run at {next_run_time}")
 
     def schedule_all_tasks(self):
-        """根据当前配置安排所有启用的任务。"""
+        """Schedule all enabled tasks according to current configuration."""
         self.scheduler.remove_all_jobs()
         self.job_counts.clear()
         self.task_signatures.clear()
-        logger.info("清空现有作业, 开始根据新配置重新调度...")
+        logger.info("Clearing existing jobs, starting to reschedule according to new configuration...")
 
         for task in self.config.tasks:
-            # 生成并保存任务签名
+            # Generate and save task signature
             self.task_signatures[task.alias] = self.get_task_signature(task)
 
             if not task.enabled:
@@ -124,13 +126,13 @@ class TaskScheduler:
             self._schedule_single_task(task, self.device_map)
 
     def get_task_signature(self, task: TaskConfig) -> str:
-        """生成任务签名用于对比变更"""
-        # 创建任务的关键属性字典
+        """Generate task signature for change comparison"""
+        # Create key attributes dictionary for task
         task_data = {
             "alias": task.alias,
             "enabled": task.enabled,
             "protocol": task.protocol,
-            "targets": sorted(task.targets),  # 排序确保一致性
+            "targets": sorted(task.targets),  # Sort to ensure consistency
             "storage": task.storage,
             "schedule": {
                 "frequency": task.schedule.frequency,
@@ -139,14 +141,14 @@ class TaskScheduler:
             },
         }
 
-        # 添加协议特定的属性
+        # Add protocol-specific attributes
         if task.protocol == "ssh":
             task_data["command"] = task.command
         elif task.protocol == "snmp":
             task_data["type"] = task.type
             task_data["oid"] = task.oid
 
-        # 添加解析配置
+        # Add parsing configuration
         if task.parse:
             task_data["parse"] = {
                 "regex": task.parse.regex,
@@ -156,27 +158,27 @@ class TaskScheduler:
         if task.labels:
             task_data["labels"] = task.labels
 
-        # 生成MD5签名
+        # Generate MD5 signature
         task_json = json.dumps(task_data, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(task_json.encode("utf-8")).hexdigest()
 
     def compare_configs(self, new_config: AppConfig) -> dict:
-        """对比新旧配置, 返回变更信息"""
+        """Compare new and old configurations, return change information"""
         changes = {
-            "added": [],  # 新增的任务
-            "removed": [],  # 删除的任务
-            "modified": [],  # 修改的任务
-            "unchanged": [],  # 未变更的任务
+            "added": [],  # Newly added tasks
+            "removed": [],  # Deleted tasks
+            "modified": [],  # Modified tasks
+            "unchanged": [],  # Unchanged tasks
         }
 
-        # 构建新配置的任务映射和签名
+        # Build task mapping and signatures for new configuration
         new_tasks = {task.alias: task for task in new_config.tasks}
         new_signatures = {alias: self.get_task_signature(task) for alias, task in new_tasks.items()}
 
-        # 构建旧配置的任务映射
+        # Build task mapping for old configuration
         old_tasks = {task.alias: task for task in self.config.tasks}
 
-        # 检查每个新任务
+        # Check each new task
         for alias, _ in new_tasks.items():
             if alias not in old_tasks:
                 changes["added"].append(alias)
@@ -185,7 +187,7 @@ class TaskScheduler:
             else:
                 changes["unchanged"].append(alias)
 
-        # 检查删除的任务
+        # Check deleted tasks
         for alias in old_tasks:
             if alias not in new_tasks:
                 changes["removed"].append(alias)
@@ -193,55 +195,55 @@ class TaskScheduler:
         return changes
 
     def update_tasks_incrementally(self, new_config: AppConfig):
-        """增量更新任务调度"""
-        logger.info("开始增量更新任务调度...")
+        """Incrementally update task scheduling"""
+        logger.info("Starting incremental task scheduling update...")
 
-        # 对比配置变更
+        # Compare configuration changes
         changes = self.compare_configs(new_config)
 
-        # 更新设备映射
+        # Update device mapping
         new_device_map = {device.name: device for device in new_config.devices}
 
-        # 记录变更统计
+        # Record change statistics
         total_changes = len(changes["added"]) + len(changes["removed"]) + len(changes["modified"])
         if total_changes == 0:
-            logger.info("配置无变更, 跳过任务调度更新")
+            logger.info("No configuration changes, skipping task scheduling update")
             return
 
         logger.info(
-            f"检测到配置变更: 新增{len(changes['added'])}个, 删除{len(changes['removed'])}个, 修改{len(changes['modified'])}个, 未变更{len(changes['unchanged'])}个"
+            f"Configuration changes detected: added {len(changes['added'])}, removed {len(changes['removed'])}, modified {len(changes['modified'])}, unchanged {len(changes['unchanged'])}"
         )
 
-        # 处理删除的任务
+        # Handle deleted tasks
         for alias in changes["removed"]:
             self._remove_task_jobs(alias)
             if alias in self.task_signatures:
                 del self.task_signatures[alias]
-            logger.info(f"已删除任务: {alias}")
+            logger.info(f"Deleted task: {alias}")
 
-        # 处理修改的任务
+        # Handle modified tasks
         for alias in changes["modified"]:
             self._remove_task_jobs(alias)
             task = next(t for t in new_config.tasks if t.alias == alias)
             self._schedule_single_task(task, new_device_map)
             self.task_signatures[alias] = self.get_task_signature(task)
-            logger.info(f"已更新任务: {alias}")
+            logger.info(f"Updated task: {alias}")
 
-        # 处理新增的任务
+        # Handle newly added tasks
         for alias in changes["added"]:
             task = next(t for t in new_config.tasks if t.alias == alias)
             self._schedule_single_task(task, new_device_map)
             self.task_signatures[alias] = self.get_task_signature(task)
-            logger.info(f"已添加任务: {alias}")
+            logger.info(f"Added task: {alias}")
 
-        # 更新配置和设备映射
+        # Update configuration and device mapping
         self.config = new_config
         self.device_map = new_device_map
 
-        logger.success(f"增量更新完成! 共处理 {total_changes} 个变更")
+        logger.success(f"Incremental update completed! Processed {total_changes} changes")
 
     def _remove_task_jobs(self, task_alias: str):
-        """移除指定任务的所有作业"""
+        """Remove all jobs for specified task"""
         jobs_to_remove = []
         for job in self.scheduler.get_jobs():
             if job.id.startswith(f"{task_alias}_"):
@@ -249,61 +251,63 @@ class TaskScheduler:
 
         for job_id in jobs_to_remove:
             self.remove_job(job_id)
-            # 清理作业计数
+            # Clean up job count
             if job_id in self.job_counts:
                 del self.job_counts[job_id]
 
     def _schedule_single_task(self, task: TaskConfig, device_map: dict[str, DeviceConfig]):
-        """为单个任务安排调度"""
+        """Schedule a single task"""
         if not task.enabled:
-            logger.info(f"任务 {task.alias} 已禁用, 跳过调度")
+            logger.info(f"Task {task.alias} is disabled, skipping scheduling")
             return
 
         for device_name in task.targets:
             device = device_map.get(device_name)
             if not device:
-                logger.warning(f"任务 {task.alias} 的目标设备 {device_name} 未在配置中定义, 已跳过")
+                logger.warning(
+                    f"Target device {device_name} for task {task.alias} is not defined in configuration, skipped"
+                )
                 continue
 
             self.schedule_task_for_device(task, device)
 
     def reload_config_and_update_tasks(self, new_config: AppConfig):
-        """重新加载配置并增量更新任务"""
+        """Reload configuration and incrementally update tasks"""
         if new_config:
             self.update_tasks_incrementally(new_config)
         else:
-            logger.error("新配置为空, 保持当前调度不变")
+            logger.error("New configuration is empty, keeping current scheduling unchanged")
 
     def start(self):
-        logger.info("启动调度器...")
+        logger.info("Starting scheduler...")
         self.scheduler.start()
 
     def stop(self):
-        logger.info("关闭调度器...")
+        logger.info("Shutting down scheduler...")
         self.scheduler.shutdown()
 
     def remove_job(self, job_id: str):
-        """从调度器中移除指定作业"""
+        """Remove specified job from scheduler"""
         try:
             self.scheduler.remove_job(job_id)
-            logger.info(f"已从调度器移除作业 {job_id}")
+            logger.info(f"Removed job {job_id} from scheduler")
         except Exception as e:
-            logger.warning(f"从调度器移除作业 {job_id} 失败: {e}")
+            logger.warning(f"Failed to remove job {job_id} from scheduler: {e}")
 
     def schedule_task_for_device(self, task: TaskConfig, device: DeviceConfig):
-        """为特定设备安排任务"""
+        """Schedule task for specific device"""
         job_id = f"{task.alias}_{device.name}"
         schedule = task.schedule
 
-        # 如果任务已存在,先移除
+        # If task already exists, remove it first
         self.remove_job(job_id)
 
-        # 如果任务被禁用,则不安排
+        # If task is disabled, don't schedule
         if not task.enabled:
-            logger.info(f"任务 {task.alias} 已禁用,不会安排作业")
+            logger.info(f"Task {task.alias} is disabled, will not schedule job")
             return
 
-        # 安排新作业
+        # Schedule new job
         if schedule.frequency == 1:
             self.scheduler.add_job(
                 self._execute_job,
@@ -312,14 +316,14 @@ class TaskScheduler:
                 args=[task, device],
                 id=job_id,
             )
-            logger.info(f"已安排作业 {job_id} (仅执行一次)。")
+            logger.info(f"Scheduled job {job_id} (execute once only).")
         elif schedule.mode == "interval" and schedule.seconds is not None:
             self.scheduler.add_job(
                 self._execute_job, IntervalTrigger(seconds=schedule.seconds), args=[task, device], id=job_id
             )
-            logger.info(f"已安排作业 {job_id} (interval模式, 每 {schedule.seconds} 秒)。")
+            logger.info(f"Scheduled job {job_id} (interval mode, every {schedule.seconds} seconds).")
         elif schedule.mode == "delay":
-            # delay 模式的第一次执行是立即执行
+            # First execution in delay mode is immediate
             self.scheduler.add_job(
                 self._execute_job,
                 "date",
@@ -327,4 +331,4 @@ class TaskScheduler:
                 args=[task, device],
                 id=job_id,
             )
-            logger.info(f"已安排作业 {job_id} (delay模式, 首次执行)。")
+            logger.info(f"Scheduled job {job_id} (delay mode, first execution).")

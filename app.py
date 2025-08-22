@@ -9,107 +9,109 @@ from core.config_loader import AppConfig, load_config
 from core.database import close_db, init_db
 from core.scheduler import TaskScheduler
 
-# 导入核心模块
+# Import core modules
 from core.ulog import setup_logging
 from core.watch import start_watching
 from core.web_server import app, app_state
 
-# --- 全局变量 ---
+# --- Global variables ---
 CONFIG_PATH = "config.yaml"
 
 
-# --- 主应用逻辑 ---
+# --- Main application logic ---
 def reload_config_and_reschedule(scheduler: TaskScheduler):
-    """回调函数: 重新加载配置并增量更新调度器。"""
-    logger.info("检测到配置变更, 开始重载...")
+    """Callback function: Reload configuration and incrementally update scheduler."""
+    logger.info("Configuration change detected, starting reload...")
     new_config = load_config(CONFIG_PATH)
     if new_config:
-        # 更新Web服务器持有的配置
+        # Update configuration held by web server
         app_state["config"] = new_config
 
-        # 使用增量更新机制
+        # Use incremental update mechanism
         scheduler.reload_config_and_update_tasks(new_config)
-        logger.success("配置重载和任务增量更新成功! ")
+        logger.success("Configuration reload and task incremental update successful!")
     else:
-        logger.error("加载新配置失败, 调度器将继续使用旧配置运行。")
+        logger.error("Failed to load new configuration, scheduler will continue running with old configuration.")
 
 
 async def main():
-    """应用主入口。"""
-    # 1. 解析命令行参数
+    """Main application entry point."""
+    # 1. Parse command line arguments
     valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    parser = argparse.ArgumentParser(description="Hwatch - 轻量级运维采集平台")
+    parser = argparse.ArgumentParser(description="Hwatch - Lightweight Operations Collection Platform")
     parser.add_argument(
         "--level",
-        default="WARNING",  # 命令行参数的默认值
+        default="WARNING",  # Default value for command line argument
         choices=valid_levels,
-        help="设置控制台的日志级别",
+        help="Set console log level",
     )
     args = parser.parse_args()
 
-    # 2. 检查环境变量, 环境变量优先级最高
+    # 2. Check environment variables, environment variables have highest priority
     env_log_level = os.getenv("LOG_LEVEL")
     if env_log_level:
         env_log_level = env_log_level.upper()
         if env_log_level in valid_levels:
             final_log_level = env_log_level
-            log_source = "环境变量"
+            log_source = "environment variable"
         else:
-            logger.warning(f"环境变量LOG_LEVEL值无效: {env_log_level}, 使用命令行参数: {args.level}")
+            logger.warning(
+                f"Invalid LOG_LEVEL environment variable value: {env_log_level}, using command line argument: {args.level}"
+            )
             final_log_level = args.level
-            log_source = "命令行参数(环境变量无效)"
+            log_source = "command line argument (invalid environment variable)"
     else:
         final_log_level = args.level
-        log_source = "命令行参数"
+        log_source = "command line argument"
 
-    # 3. 初始化日志系统
+    # 3. Initialize logging system
     setup_logging(level=final_log_level)
-    logger.info(f"日志级别设置为: {final_log_level} (来源: {log_source})")
+    logger.info(f"Log level set to: {final_log_level} (source: {log_source})")
 
-    # 4. 初始化数据库
+    # 4. Initialize database
     await init_db()
 
-    # 5. 加载初始配置
+    # 5. Load initial configuration
     config = load_config(CONFIG_PATH)
     if not config:
-        logger.error(f"无法加载初始配置 {CONFIG_PATH}, 程序退出。")
+        logger.error(f"Unable to load initial configuration {CONFIG_PATH}, exiting program.")
         return
 
-    # 6. 初始化调度器
+    # 6. Initialize scheduler
     scheduler = TaskScheduler(config)
 
-    # 7. 设置Web应用状态机
+    # 7. Set up web application state machine
     app_state["config"] = config
     app_state["config_path"] = CONFIG_PATH
     app_state["scheduler"] = scheduler
     app_state["reload_callback"] = lambda: reload_config_and_reschedule(scheduler)
 
-    # 8. 首次调度所有任务
+    # 8. Schedule all tasks for the first time
     scheduler.schedule_all_tasks()
 
-    # 9. 启动文件监控
+    # 9. Start file monitoring
     start_watching(CONFIG_PATH, app_state["reload_callback"])
 
-    # 10. 启动调度器
+    # 10. Start scheduler
     scheduler.start()
 
-    # 11. 配置并启动Uvicorn Web服务器
+    # 11. Configure and start Uvicorn web server
     uvicorn_config = uvicorn.Config(app, host="0.0.0.0", port=8080, log_level=args.level.lower())
     server = uvicorn.Server(uvicorn_config)
 
-    logger.info("Hwatch 应用启动成功! 访问 http://localhost:8080")
+    logger.info("Hwatch application started successfully! Access http://localhost:8080")
 
     try:
         await server.serve()
     finally:
-        # 优雅关闭
+        # Graceful shutdown
         scheduler.stop()
         await close_db()
-        logger.info("Hwatch 应用已关闭。")
+        logger.info("Hwatch application has been shutdown.")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("收到退出信号, 程序正在关闭...")
+        logger.info("Exit signal received, shutting down program...")

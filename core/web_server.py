@@ -11,13 +11,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 
-# 导入项目模块
+# Import project modules
 from core.config_loader import AppConfig, load_config
 from core.database import get_available_devices, get_available_tasks, get_chart_data
 
 
 def _generate_chart_color(index: int) -> str:
-    """基于索引生成图表颜色, 支持无限数量的key"""
+    """Generate chart color based on index, supports unlimited number of keys"""
     base_colors = [
         "#FF6384",
         "#36A2EB",
@@ -36,7 +36,7 @@ def _generate_chart_color(index: int) -> str:
     if index < len(base_colors):
         return base_colors[index]
 
-    # 使用HSL生成新颜色
+    # Use HSL to generate new colors
     hue = (index * 137.5) % 360
     saturation = 70 + (index % 3) * 10
     lightness = 50 + (index % 4) * 10
@@ -44,7 +44,7 @@ def _generate_chart_color(index: int) -> str:
 
 
 def _simplify_oid_key(key: str) -> str:
-    """简化OID格式的key显示"""
+    """Simplify OID format key display"""
     if "." in key and len(key.split(".")) > 6:
         key_parts = key.split(".")
         return ".".join(key_parts[-2:])
@@ -52,18 +52,18 @@ def _simplify_oid_key(key: str) -> str:
 
 
 def _get_background_color(border_color: str) -> str:
-    """获取对应的背景颜色"""
+    """Get corresponding background color"""
     if border_color.startswith("hsl"):
         return border_color.replace("hsl", "hsla").replace(")", ", 0.2)")
     return border_color + "20"
 
 
-# --- 全局变量与应用实例 ---
+# --- Global variables and application instance ---
 
 app = FastAPI(title="Hwatch Play")
 
 
-# 添加访问日志中间件
+# Add access log middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
@@ -77,38 +77,38 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# 挂载静态文件目录
+# Mount static files directory
 static_path = os.path.join(os.path.dirname(__file__), "../views/static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
-# 设置模板目录
+# Set template directory
 templates_path = os.path.join(os.path.dirname(__file__), "../views/templates")
 templates = Jinja2Templates(directory=templates_path)
 
-# 应用状态机 (后续由主程序 app.py 填充)
+# Application state machine (later filled by main program app.py)
 app_state: dict[str, Any] = {
     "config": None,
     "config_path": None,
-    "scheduler": None,  # 调度器实例
-    "reload_callback": None,  # 重新加载配置的回调
+    "scheduler": None,  # Scheduler instance
+    "reload_callback": None,  # Callback for reloading configuration
 }
 
-# --- 认证 ---
+# --- Authentication ---
 
-# 简单的用户数据库 - 从环境变量获取, 如果不存在则使用默认值
+# Simple user database - get from environment variables, use defaults if not exist
 WEB_USERNAME = os.getenv("WEB_USERNAME", "admin")
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "123456")
 FAKE_USERS_DB = {WEB_USERNAME: {"password": WEB_PASSWORD}}
 
-# 会话存储 - 存储活跃的会话token和过期时间
+# Session storage - store active session tokens and expiration times
 ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
 
-# 会话有效期(2小时)
+# Session validity period (2 hours)
 SESSION_EXPIRE_HOURS = 2
 
 
 def cleanup_expired_sessions():
-    """清理过期的会话"""
+    """Clean up expired sessions"""
     current_time = datetime.now()
     expired_tokens = []
 
@@ -118,12 +118,12 @@ def cleanup_expired_sessions():
 
     for token in expired_tokens:
         del ACTIVE_SESSIONS[token]
-        logger.debug(f"清理过期会话: {token[:8]}...")
+        logger.debug(f"Cleaning up expired session: {token[:8]}...")
 
 
 def get_current_user(request: Request):
-    """获取当前用户, 验证会话有效性"""
-    cleanup_expired_sessions()  # 清理过期会话
+    """Get current user, validate session validity"""
+    cleanup_expired_sessions()  # Clean up expired sessions
 
     token = request.cookies.get("session_token")
     if not token:
@@ -133,23 +133,23 @@ def get_current_user(request: Request):
     if not session_data:
         return None
 
-    # 检查会话是否过期
+    # Check if session has expired
     if datetime.now() > session_data["expires_at"]:
         del ACTIVE_SESSIONS[token]
-        logger.info(f"会话已过期: {session_data['username']}")
+        logger.info(f"Session has expired: {session_data['username']}")
         return None
 
-    # 更新最后访问时间
+    # Update last access time
     session_data["last_access"] = datetime.now()
 
     return {"username": session_data["username"]}
 
 
-# 创建依赖注入单例变量
+# Create dependency injection singleton variable
 current_user_dependency = Depends(get_current_user)
 
 
-# --- Web 页面路由 ---
+# --- Web page routes ---
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -159,22 +159,22 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def handle_login(request: Request, username: str = Form(...), password: str = Form(...)):
-    logger.info(f"用户尝试登录: {username} (IP: {request.client.host})")
+    logger.info(f"User login attempt: {username} (IP: {request.client.host})")
 
     user = FAKE_USERS_DB.get(username)
     if not user or user["password"] != password:
-        logger.warning(f"用户登录失败: {username} (IP: {request.client.host}) - 用户名或密码错误")
+        logger.warning(f"User login failed: {username} (IP: {request.client.host}) - Invalid username or password")
         return templates.TemplateResponse(
             "login.tpl",
             {"request": request, "error": "Invalid username or password"},
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
-    # 生成安全的会话token
+    # Generate secure session token
     session_token = secrets.token_urlsafe(32)
     expires_at = datetime.now() + timedelta(hours=SESSION_EXPIRE_HOURS)
 
-    # 存储会话信息
+    # Store session information
     ACTIVE_SESSIONS[session_token] = {
         "username": username,
         "created_at": datetime.now(),
@@ -183,17 +183,17 @@ async def handle_login(request: Request, username: str = Form(...), password: st
         "ip": request.client.host,
     }
 
-    logger.info(f"用户登录成功: {username} (IP: {request.client.host}), 会话有效期至: {expires_at}")
+    logger.info(f"User login successful: {username} (IP: {request.client.host}), session valid until: {expires_at}")
 
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    # 设置安全的会话cookie
+    # Set secure session cookie
     response.set_cookie(
         key="session_token",
         value=session_token,
-        httponly=True,  # 防止XSS攻击
-        secure=False,  # 在生产环境中应设为True(需要HTTPS)
-        samesite="lax",  # 防止CSRF攻击
-        max_age=SESSION_EXPIRE_HOURS * 3600,  # 8小时后cookie过期
+        httponly=True,  # Prevent XSS attacks
+        secure=False,  # Should be set to True in production (requires HTTPS)
+        samesite="lax",  # Prevent CSRF attacks
+        max_age=SESSION_EXPIRE_HOURS * 3600,  # Cookie expires after 8 hours
     )
     return response
 
@@ -203,13 +203,13 @@ async def logout(request: Request):
     user = get_current_user(request)
     username = "Unknown" if not user else user.get("username", "Unknown")
 
-    # 清理服务器端会话
+    # Clean up server-side session
     token = request.cookies.get("session_token")
     if token and token in ACTIVE_SESSIONS:
         del ACTIVE_SESSIONS[token]
-        logger.info(f"用户登出: {username} (IP: {request.client.host}), 会话已清理")
+        logger.info(f"User logout: {username} (IP: {request.client.host}), session cleaned up")
     else:
-        logger.info(f"用户登出: {username} (IP: {request.client.host})")
+        logger.info(f"User logout: {username} (IP: {request.client.host})")
 
     response = RedirectResponse(url="/login")
     response.delete_cookie("session_token")
@@ -223,7 +223,7 @@ async def root(request: Request, user: dict = current_user_dependency):
     return templates.TemplateResponse("app.tpl", {"request": request})
 
 
-# --- API 路由 ---
+# --- API routes ---
 
 
 @app.get("/api/tasks", response_model=list[dict[str, Any]])
@@ -233,12 +233,12 @@ async def get_tasks(user: dict = current_user_dependency):
     config: AppConfig = app_state.get("config")
     if not config:
         return []
-    # 返回前端需要的数据格式
+    # Return data format needed by frontend
     task_list = []
-    # 创建设备映射以便快速查找
+    # Create device mapping for quick lookup
     device_map = {device.name: device for device in config.devices}
     for task in config.tasks:
-        # 获取任务目标设备的IP地址
+        # Get IP addresses of task target devices
         target_ips = []
         target_devices = []
         for target_name in task.targets:
@@ -270,8 +270,10 @@ async def get_config(user: dict = current_user_dependency):
             content = f.read()
         return Response(content=content, media_type="text/plain; charset=utf-8")
     except Exception as e:
-        logger.error(f"读取配置文件失败: {e}")
-        raise HTTPException(status_code=500, detail="无法读取配置文件") from None  # 不保留原始异常链, 避免混淆
+        logger.error(f"Failed to read configuration file: {e}")
+        raise HTTPException(
+            status_code=500, detail="Unable to read configuration file"
+        ) from None  # Don't preserve original exception chain to avoid confusion
 
 
 @app.post("/api/config")
@@ -280,29 +282,29 @@ async def save_config(request: Request, user: dict = current_user_dependency):
         raise HTTPException(status_code=401)
 
     username = user.get("username", "Unknown")
-    logger.info(f"用户 {username} 开始更新配置文件")
+    logger.info(f"User {username} started updating configuration file")
 
     content = await request.body()
     content = content.decode("utf-8")
     config_path = app_state.get("config_path")
 
-    # 验证YAML格式
+    # Validate YAML format
     try:
         yaml.safe_load(content)
-        logger.debug("配置文件 YAML 格式验证通过")
+        logger.debug("Configuration file YAML format validation passed")
     except yaml.YAMLError as e:
-        logger.error(f"用户 {username} 提供的配置文件 YAML 格式错误: {e}")
-        raise HTTPException(status_code=400, detail=f"YAML格式错误: {e}") from None
+        logger.error(f"User {username} provided configuration file YAML format error: {e}")
+        raise HTTPException(status_code=400, detail=f"YAML format error: {e}") from None
 
     try:
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(content)
-        logger.info(f"配置文件 {config_path} 已被用户 {username} 在线更新。")
-        # 文件保存后,watchdog会自动触发重载逻辑
-        return {"message": "配置保存成功! "}
+        logger.info(f"Configuration file {config_path} has been updated online by user {username}.")
+        # After file is saved, watchdog will automatically trigger reload logic
+        return {"message": "Configuration saved successfully!"}
     except Exception as e:
-        logger.error(f"用户 {username} 更新配置文件失败: {e}")
-        raise HTTPException(status_code=500, detail="无法写入配置文件") from None
+        logger.error(f"User {username} failed to update configuration file: {e}")
+        raise HTTPException(status_code=500, detail="Unable to write configuration file") from None
 
 
 @app.get("/api/chart")
@@ -316,35 +318,35 @@ async def get_chart_data_api(
     if not user:
         raise HTTPException(status_code=401)
 
-    # 解析时间参数, 如果没有提供则使用默认时间范围(最近2小时)
+    # Parse time parameters, use default time range (last 2 hours) if not provided
     if start and end:
         try:
             start_date = datetime.fromisoformat(start)
             end_date = datetime.fromisoformat(end)
         except ValueError:
-            # 如果时间格式无效, 使用默认时间范围(最近2小时)
+            # If time format is invalid, use default time range (last 2 hours)
             end_date = datetime.now()
             start_date = end_date - timedelta(hours=2)
     else:
-        # 默认时间范围: 最近2小时
+        # Default time range: last 2 hours
         end_date = datetime.now()
         start_date = end_date - timedelta(hours=2)
 
-    # 获取任务列表 - 基于指定时间区间内实际存在数据的任务
+    # Get task list - based on tasks that actually have data in specified time range
     tasks = await get_available_tasks(start_date, end_date)
 
-    # 获取设备列表的逻辑:
-    # 1. 如果没有选择任务, 设备列表为空
-    # 2. 如果选择了任务, 获取该任务在指定时间区间内的设备列表
+    # Device list logic:
+    # 1. If no task is selected, device list is empty
+    # 2. If task is selected, get device list for that task in specified time range
     if task_alias:
         available_devices = await get_available_devices(start_date, end_date, task_alias)
     else:
         available_devices = []
 
-    # 解析选中的设备
+    # Parse selected devices
     selected_devices = devices.split(",") if devices else []
 
-    # 构建基础响应数据
+    # Build basic response data
     response_data = {
         "tasks": tasks,
         "available_devices": available_devices,
@@ -352,15 +354,15 @@ async def get_chart_data_api(
         "datasets": [],
     }
 
-    # 只有当选择了任务、设备和时间时, 才查询图表数据
+    # Only query chart data when task, devices and time are selected
     if task_alias and selected_devices and start and end:
-        # 获取原始数据
+        # Get raw data
         raw_data = await get_chart_data(task_alias, start_date, end_date)
 
-        # 转换为 Chart.js 格式
+        # Convert to Chart.js format
         datasets = []
         if raw_data:
-            # 按设备和key组合分组数据
+            # Group data by device and key combination
             series_data = {}
             for row in raw_data:
                 device = row["device_name"]
@@ -369,22 +371,22 @@ async def get_chart_data_api(
                 if device not in selected_devices:
                     continue
 
-                # 创建唯一的系列标识符: device_key
+                # Create unique series identifier: device_key
                 series_key = f"{device}_{key}"
 
                 if series_key not in series_data:
                     series_data[series_key] = {"device": device, "key": key, "data": []}
 
-                # 解析数值, 处理各种可能的数据格式
+                # Parse numeric value, handle various possible data formats
                 value = row["value"]
                 numeric_value = 0.0
 
                 if value is not None:
                     try:
-                        # 尝试直接转换为浮点数
+                        # Try direct conversion to float
                         numeric_value = float(value)
                     except (ValueError, TypeError):
-                        # 如果转换失败, 尝试清理字符串后再转换
+                        # If conversion fails, try cleaning string then converting
                         try:
                             cleaned_value = str(value).strip().replace(",", "")
                             if cleaned_value and cleaned_value.replace(".", "").replace("-", "").isdigit():
@@ -407,19 +409,19 @@ async def get_chart_data_api(
 
                 series_data[series_key]["data"].append({"x": timestamp_seconds, "y": numeric_value})
 
-            # 为每个设备-key组合创建数据集
+            # Create dataset for each device-key combination
             sorted_series = sorted(series_data.items(), key=lambda x: (x[1]["device"], x[1]["key"]))
 
             for color_index, (_, series_info) in enumerate(sorted_series):
                 # device_keys = [k for k, v in series_data.items() if v["device"] == series_info["device"]]
 
-                # 生成标签
+                # Generate label
                 # if len(device_keys) == 1:
                 #     label = f"{series_info['key']}"
                 # else:
                 label = f"{series_info['device']} - {series_info['key']}"
 
-                # 生成颜色
+                # Generate color
                 border_color = _generate_chart_color(color_index)
                 background_color = _get_background_color(border_color)
 
@@ -461,22 +463,22 @@ async def download_outfile(filename: str, user: dict = current_user_dependency):
 
     username = user.get("username", "Unknown")
 
-    # 防止路径遍历攻击
+    # Prevent path traversal attacks
     if ".." in filename or filename.startswith("/"):
-        logger.warning(f"用户 {username} 尝试下载非法文件路径: {filename}")
-        raise HTTPException(status_code=400, detail="无效的文件名")
+        logger.warning(f"User {username} attempted to download illegal file path: {filename}")
+        raise HTTPException(status_code=400, detail="Invalid filename")
 
     file_path = os.path.join("outfile", filename)
 
     if not os.path.exists(file_path):
-        logger.warning(f"用户 {username} 尝试下载不存在的文件: {filename}")
-        raise HTTPException(status_code=404, detail="文件未找到")
+        logger.warning(f"User {username} attempted to download non-existent file: {filename}")
+        raise HTTPException(status_code=404, detail="File not found")
 
     if not os.path.isfile(file_path):
-        logger.warning(f"用户 {username} 尝试下载的路径不是文件: {filename}")
-        raise HTTPException(status_code=400, detail="路径不是文件")
+        logger.warning(f"User {username} attempted to download path that is not a file: {filename}")
+        raise HTTPException(status_code=400, detail="Path is not a file")
 
-    logger.info(f"用户 {username} 下载文件: {filename}")
+    logger.info(f"User {username} downloaded file: {filename}")
     return FileResponse(file_path, filename=filename)
 
 
@@ -484,12 +486,12 @@ async def download_outfile(filename: str, user: dict = current_user_dependency):
 async def toggle_task_enabled(task_alias: str, user: dict = current_user_dependency):
     if not user:
         raise HTTPException(status_code=401)
-    logger.warning(f"收到切换任务 {task_alias} 状态的请求,但调度器逻辑尚未实现。")
-    # TODO: 实现与调度器交互的逻辑
-    # 1. 修改内存中的配置状态
-    # 2. 通知调度器移除或添加相应的job
-    # 3. 可能需要重写配置文件以持久化状态
-    return {"status": "pending", "message": "调度器逻辑未实现"}
+    logger.warning(f"Received request to toggle task {task_alias} status, but scheduler logic not implemented yet.")
+    # TODO: Implement logic to interact with scheduler
+    # 1. Modify configuration status in memory
+    # 2. Notify scheduler to remove or add corresponding jobs
+    # 3. May need to rewrite configuration file to persist status
+    return {"status": "pending", "message": "Scheduler logic not implemented"}
 
 
 @app.post("/api/tasks/{action}/{device}/{task_alias}")
@@ -498,18 +500,18 @@ async def handle_task_action(action: str, device: str, task_alias: str, user: di
         raise HTTPException(status_code=401)
 
     username = user.get("username", "Unknown")
-    logger.info(f"用户 {username} 尝试对任务 '{task_alias}' 在设备 '{device}' 上执行操作 '{action}'")
+    logger.info(f"User {username} attempted to perform action '{action}' on task '{task_alias}' on device '{device}'")
 
     if action not in ["enable", "disable"]:
-        logger.warning(f"用户 {username} 对任务 '{task_alias}' 执行了无效操作: {action}")
-        raise HTTPException(status_code=400, detail="无效的操作,仅支持 'enable' 或 'disable'")
+        logger.warning(f"User {username} performed invalid action on task '{task_alias}': {action}")
+        raise HTTPException(status_code=400, detail="Invalid action, only 'enable' or 'disable' supported")
 
     config: AppConfig = app_state.get("config")
     if not config:
-        logger.error(f"用户 {username} 操作任务 '{task_alias}' 失败: 系统配置未加载")
-        raise HTTPException(status_code=500, detail="配置未加载")
+        logger.error(f"User {username} failed to operate task '{task_alias}': system configuration not loaded")
+        raise HTTPException(status_code=500, detail="Configuration not loaded")
 
-    # 查找对应的任务
+    # Find corresponding task
     task = None
     for t in config.tasks:
         if t.alias == task_alias:
@@ -517,33 +519,35 @@ async def handle_task_action(action: str, device: str, task_alias: str, user: di
             break
 
     if not task:
-        logger.warning(f"用户 {username} 尝试操作不存在的任务: {task_alias}")
-        raise HTTPException(status_code=404, detail=f"任务 {task_alias} 未找到")
+        logger.warning(f"User {username} attempted to operate non-existent task: {task_alias}")
+        raise HTTPException(status_code=404, detail=f"Task {task_alias} not found")
 
-    # 检查任务是否针对指定设备
+    # Check if task targets specified device
     if device not in task.targets:
-        logger.warning(f"用户 {username} 尝试在设备 '{device}' 上操作任务 '{task_alias}',但任务不针对该设备")
-        raise HTTPException(status_code=400, detail=f"任务 {task_alias} 不针对设备 {device}")
+        logger.warning(
+            f"User {username} attempted to operate task '{task_alias}' on device '{device}', but task does not target that device"
+        )
+        raise HTTPException(status_code=400, detail=f"Task {task_alias} does not target device {device}")
 
-    # 获取配置文件路径
+    # Get configuration file path
     config_path = app_state.get("config_path")
     if not config_path:
-        logger.error(f"用户 {username} 操作任务 '{task_alias}' 失败: 配置文件路径未设置")
-        raise HTTPException(status_code=500, detail="配置文件路径未设置")
+        logger.error(f"User {username} failed to operate task '{task_alias}': configuration file path not set")
+        raise HTTPException(status_code=500, detail="Configuration file path not set")
 
-    # 读取原始配置文件内容
+    # Read original configuration file content
     try:
         with open(config_path, encoding="utf-8") as f:
             config_content = f.read()
 
-        # 解析YAML配置
+        # Parse YAML configuration
         config_data = yaml.safe_load(config_content)
-        logger.debug(f"用户 {username} 成功读取配置文件内容")
+        logger.debug(f"User {username} successfully read configuration file content")
     except Exception as e:
-        logger.error(f"用户 {username} 操作任务 '{task_alias}' 失败: 读取配置文件失败 - {e}")
-        raise HTTPException(status_code=500, detail=f"读取配置文件失败: {e}") from None
+        logger.error(f"User {username} failed to operate task '{task_alias}': failed to read configuration file - {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to read configuration file: {e}") from None
 
-    # 查找并更新对应任务的启用状态
+    # Find and update corresponding task's enabled status
     task_found = False
     for t in config_data.get("tasks", []):
         if t.get("alias") == task_alias:
@@ -551,25 +555,30 @@ async def handle_task_action(action: str, device: str, task_alias: str, user: di
             new_status = action == "enable"
             t["enabled"] = new_status
             task_found = True
-            logger.info(f"用户 {username} 将任务 '{task_alias}' 状态从 {old_status} 更新为 {new_status}")
+            logger.info(f"User {username} updated task '{task_alias}' status from {old_status} to {new_status}")
             break
 
     if not task_found:
-        logger.warning(f"用户 {username} 尝试操作的任务 '{task_alias}' 在配置文件中未找到")
-        raise HTTPException(status_code=404, detail=f"任务 {task_alias} 在配置文件中未找到")
+        logger.warning(f"User {username} attempted to operate task '{task_alias}' not found in configuration file")
+        raise HTTPException(status_code=404, detail=f"Task {task_alias} not found in configuration file")
 
-    # 将更新后的配置写回文件
+    # Write updated configuration back to file
     try:
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(config_data, f, default_flow_style=False, allow_unicode=True, indent=2)
-        logger.info(f"用户 {username} 成功更新配置文件 {config_path}")
+        logger.info(f"User {username} successfully updated configuration file {config_path}")
     except Exception as e:
-        logger.error(f"用户 {username} 更新配置文件失败: {e}")
-        raise HTTPException(status_code=500, detail=f"写入配置文件失败: {e}") from None
+        logger.error(f"User {username} failed to update configuration file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to write configuration file: {e}") from None
 
-    # 由于配置文件已更新,watch模块会自动检测到变更并重新加载配置和任务
-    logger.info(f"用户 {username} 对任务 '{task_alias}' 在设备 '{device}' 上的操作 '{action}' 完成,等待配置重载...")
-    return {"status": "success", "message": f"任务 {task_alias} 已{action},配置将在后台自动更新"}
+    # Since configuration file has been updated, watch module will automatically detect changes and reload configuration and tasks
+    logger.info(
+        f"User {username} operation '{action}' on task '{task_alias}' on device '{device}' completed, waiting for configuration reload..."
+    )
+    return {
+        "status": "success",
+        "message": f"Task {task_alias} has been {action}ed, configuration will be automatically updated in background",
+    }
 
 
-# 注意: 以下是需要调度器实现的API的存根 (stub)
+# Note: The following are stubs for APIs that need scheduler implementation

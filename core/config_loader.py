@@ -5,7 +5,7 @@ from loguru import logger
 from pydantic import BaseModel, ValidationError
 
 
-# --- 数据模型定义 ---
+# --- Data model definitions ---
 class ScheduleConfig(BaseModel):
     frequency: int = 1
     mode: str | None = None
@@ -33,7 +33,7 @@ class TaskConfig(BaseModel):
 
 class ConnectionDetails(BaseModel):
     username: str | None = None
-    password: str | None = None  # 注意: 明文密码安全风险
+    password: str | None = None  # Note: Plain text password security risk
     port: int
     timeout: int = 10
     retry: int = 3
@@ -56,31 +56,31 @@ class AppConfig(BaseModel):
     tasks: list[TaskConfig]
 
 
-# --- 加载函数 ---
+# --- Loading functions ---
 def load_config(config_path: str) -> AppConfig | None:
     """
-    从指定路径加载、验证并解析YAML配置文件。
+    Load, validate and parse YAML configuration file from specified path.
 
     Args:
-        config_path (str): 配置文件的路径。
+        config_path (str): Path to the configuration file.
 
     Returns:
-        Optional[AppConfig]: 如果加载和验证成功, 返回AppConfig对象, 否则返回None。
+        Optional[AppConfig]: Returns AppConfig object if loading and validation succeed, otherwise returns None.
     """
-    logger.info(f"开始从 {config_path} 加载配置...")
+    logger.info(f"Starting to load configuration from {config_path}...")
     try:
         with open(config_path, encoding="utf-8") as f:
             data: dict[str, Any] | None = yaml.safe_load(f)
 
         if not data:
-            logger.error("配置文件为空或格式不正确。")
+            logger.error("Configuration file is empty or format is incorrect.")
             return None
 
         config = AppConfig(**data)
-        logger.success("配置加载并验证成功!")
-        logger.debug(f"加载了 {len(config.devices)} 个设备和 {len(config.tasks)} 个任务。")
+        logger.success("Configuration loaded and validated successfully!")
+        logger.debug(f"Loaded {len(config.devices)} devices and {len(config.tasks)} tasks.")
 
-        # 加载具体设备和任务的
+        # Load specific devices and tasks
         # print("-" * 50)
         # for device in config.devices:
         #     for task in config.tasks:
@@ -90,41 +90,41 @@ def load_config(config_path: str) -> AppConfig | None:
         return config
 
     except FileNotFoundError:
-        logger.error(f"配置文件未找到: {config_path}")
+        logger.error(f"Configuration file not found: {config_path}")
         return None
     except yaml.YAMLError as e:
-        logger.error(f"YAML配置文件格式错误: {e}")
+        logger.error(f"YAML configuration file format error: {e}")
         return None
     except ValidationError as e:
-        logger.error(f"配置数据结构验证失败: {e}")
+        logger.error(f"Configuration data structure validation failed: {e}")
         return None
     except Exception as e:
-        logger.error(f"加载配置时发生未知错误: {e}")
+        logger.error(f"Unknown error occurred while loading configuration: {e}")
         return None
 
 
 def save_config(config: AppConfig, config_path: str) -> bool:
     """
-    将配置保存到YAML文件。
+    Save configuration to YAML file.
 
     Args:
-        config (AppConfig): 要保存的配置对象。
-        config_path (str): 配置文件的路径。
+        config (AppConfig): Configuration object to save.
+        config_path (str): Path to the configuration file.
 
     Returns:
-        bool: 保存成功返回True, 否则返回False。
+        bool: Returns True if save succeeds, otherwise returns False.
     """
-    logger.info(f"开始保存配置到 {config_path}...")
+    logger.info(f"Starting to save configuration to {config_path}...")
     try:
-        # 将Pydantic模型转换为字典
+        # Convert Pydantic model to dictionary
         config_dict = config.model_dump()
 
-        # 保存到YAML文件
+        # Save to YAML file
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(config_dict, f, default_flow_style=False, allow_unicode=True, indent=2)
 
-        logger.success("配置保存成功!")
+        logger.success("Configuration saved successfully!")
         return True
     except Exception as e:
-        logger.error(f"保存配置时发生错误: {e}")
+        logger.error(f"Error occurred while saving configuration: {e}")
         return False

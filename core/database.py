@@ -41,10 +41,10 @@ async def init_db():
         await _db_connection.execute("CREATE INDEX IF NOT EXISTS idx_composite ON task_results (task_alias, timestamp)")
 
         await _db_connection.commit()
-        logger.info("数据库初始化成功。")
+        logger.info("Database initialization successful.")
         return True
     except Exception as e:
-        logger.error(f"数据库初始化失败: {e}")
+        logger.error(f"Database initialization failed: {e}")
         # Clean up connection on error
         if _db_connection:
             await _db_connection.close()
@@ -64,12 +64,12 @@ async def _get_connection() -> aiosqlite.Connection:
 
 async def save_result(task_alias: str, device_name: str, results: dict[str, Any]):
     """
-    将任务结果保存到数据库。
+    Save task results to database.
 
     Args:
-        task_alias (str): 任务的别名。
-        device_name (str): 设备的名称。
-        results (Dict[str, Any]): 要保存的键值对结果。
+        task_alias (str): Task alias.
+        device_name (str): Device name.
+        results (Dict[str, Any]): Key-value pair results to save.
     """
     try:
         conn = await _get_connection()
@@ -84,23 +84,23 @@ async def save_result(task_alias: str, device_name: str, results: dict[str, Any]
             records,
         )
         await conn.commit()
-        logger.debug(f"成功为任务 {task_alias} on {device_name} 保存 {len(records)} 条记录。")
+        logger.debug(f"Successfully saved {len(records)} records for task {task_alias} on {device_name}.")
         return True
     except Exception as e:
-        logger.error(f"保存任务结果到数据库失败 (任务: {task_alias}): {e}")
+        logger.error(f"Failed to save task results to database (task: {task_alias}): {e}")
         return False
 
 
 async def get_available_tasks(start_date: datetime, end_date: datetime) -> list[str]:
     """
-    获取数据库中指定时间区间内有数据的任务列表。
+    Get list of tasks that have data in the specified time range in the database.
 
     Args:
-        start_date (datetime): 查询开始时间
-        end_date (datetime): 查询结束时间
+        start_date (datetime): Query start time
+        end_date (datetime): Query end time
 
     Returns:
-        List[str]: 包含数据的任务别名列表。
+        List[str]: List of task aliases that contain data.
     """
     try:
         conn = await _get_connection()
@@ -111,33 +111,33 @@ async def get_available_tasks(start_date: datetime, end_date: datetime) -> list[
             rows = await cursor.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
-        logger.error(f"查询可用任务列表失败: {e}")
+        logger.error(f"Failed to query available task list: {e}")
         return []
 
 
 async def get_available_devices(start_date: datetime, end_date: datetime, task_alias: str | None = None) -> list[str]:
     """
-    获取数据库中指定时间区间内有数据的设备列表。
+    Get list of devices that have data in the specified time range in the database.
 
     Args:
-        start_date (datetime): 查询开始时间
-        end_date (datetime): 查询结束时间
-        task_alias (str, optional): 指定任务别名, 如果提供则只返回该任务的设备
+        start_date (datetime): Query start time
+        end_date (datetime): Query end time
+        task_alias (str, optional): Specified task alias, if provided only return devices for that task
 
     Returns:
-        List[str]: 包含数据的设备名称列表。
+        List[str]: List of device names that contain data.
     """
     try:
         conn = await _get_connection()
         if task_alias:
-            # 如果指定了任务, 只返回该任务在指定时间区间内的设备
+            # If task is specified, only return devices for that task in the specified time range
             async with conn.execute(
                 "SELECT DISTINCT device_name FROM task_results WHERE timestamp BETWEEN ? AND ? AND task_alias = ? ORDER BY device_name",
                 (start_date, end_date, task_alias),
             ) as cursor:
                 rows = await cursor.fetchall()
         else:
-            # 如果没有指定任务, 返回所有设备
+            # If no task is specified, return all devices
             async with conn.execute(
                 "SELECT DISTINCT device_name FROM task_results WHERE timestamp BETWEEN ? AND ? ORDER BY device_name",
                 (start_date, end_date),
@@ -145,21 +145,21 @@ async def get_available_devices(start_date: datetime, end_date: datetime, task_a
                 rows = await cursor.fetchall()
         return [row[0] for row in rows]
     except Exception as e:
-        logger.error(f"查询可用设备列表失败: {e}")
+        logger.error(f"Failed to query available device list: {e}")
         return []
 
 
 async def get_chart_data(task_alias: str, start_date: datetime, end_date: datetime) -> list[dict[str, Any]]:
     """
-    查询用于图表展示的时间序列数据。
+    Query time series data for chart display.
 
     Args:
-        task_alias (str): 要查询的任务别名。
-        start_date (datetime): 查询的开始时间。
-        end_date (datetime): 查询的结束时间。
+        task_alias (str): Task alias to query.
+        start_date (datetime): Query start time.
+        end_date (datetime): Query end time.
 
     Returns:
-        List[Dict[str, Any]]: 包含查询结果的字典列表。
+        List[Dict[str, Any]]: List of dictionaries containing query results.
     """
     try:
         conn = await _get_connection()
@@ -171,43 +171,43 @@ async def get_chart_data(task_alias: str, start_date: datetime, end_date: dateti
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
-        logger.error(f"查询图表数据失败 (任务: {task_alias}): {e}")
+        logger.error(f"Failed to query chart data (task: {task_alias}): {e}")
         return []
 
 
 # Database optimization and maintenance functions
 async def optimize_database():
-    """优化数据库, 压缩存储和重建索引"""
+    """Optimize database, compress storage and rebuild indexes"""
     try:
         conn = await _get_connection()
         # Vacuum and analyze for better performance
         await conn.execute("VACUUM")
         await conn.execute("ANALYZE")
         await conn.commit()
-        logger.info("数据库优化完成。")
+        logger.info("Database optimization completed.")
         return True
     except Exception as e:
-        logger.error(f"数据库优化失败: {e}")
+        logger.error(f"Database optimization failed: {e}")
         return False
 
 
 async def cleanup_old_data(days: int = 90):
-    """清理指定天数之前的旧数据"""
+    """Clean up old data from specified days ago"""
     try:
         conn = await _get_connection()
         # Delete data older than specified days
         cursor = await conn.execute(f"DELETE FROM task_results WHERE timestamp < datetime('now', '-{days} days')")
         deleted_count = cursor.rowcount
         await conn.commit()
-        logger.info(f"旧数据清理完成 (删除了 {deleted_count} 条超过 {days} 天的记录)。")
+        logger.info(f"Old data cleanup completed (deleted {deleted_count} records older than {days} days).")
         return True
     except Exception as e:
-        logger.error(f"旧数据清理失败: {e}")
+        logger.error(f"Old data cleanup failed: {e}")
         return False
 
 
 async def get_database_stats():
-    """获取数据库统计信息用于监控"""
+    """Get database statistics for monitoring"""
     try:
         conn = await _get_connection()
 
@@ -238,14 +238,14 @@ async def get_database_stats():
             "database_file": DB_FILE,
         }
     except Exception as e:
-        logger.error(f"获取数据库统计信息失败: {e}")
+        logger.error(f"Failed to get database statistics: {e}")
         return {}
 
 
 async def close_db():
-    """关闭数据库连接"""
+    """Close database connection"""
     global _db_connection
     if _db_connection:
         await _db_connection.close()
         _db_connection = None
-        logger.info("数据库连接已关闭。")
+        logger.info("Database connection has been closed.")
