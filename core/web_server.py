@@ -392,7 +392,20 @@ async def get_chart_data_api(
                         except (ValueError, TypeError):
                             numeric_value = 0.0
 
-                series_data[series_key]["data"].append({"x": row["timestamp"], "y": numeric_value})
+                # Convert timestamp to seconds precision by removing microseconds
+                timestamp = row["timestamp"]
+                if isinstance(timestamp, str):
+                    # Parse datetime string and truncate to seconds
+                    try:
+                        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        timestamp_seconds = dt.replace(microsecond=0).isoformat()
+                    except ValueError:
+                        timestamp_seconds = timestamp
+                else:
+                    # If it's already a datetime object, truncate microseconds
+                    timestamp_seconds = timestamp.replace(microsecond=0).isoformat()
+
+                series_data[series_key]["data"].append({"x": timestamp_seconds, "y": numeric_value})
 
             # 为每个设备-key组合创建数据集
             sorted_series = sorted(series_data.items(), key=lambda x: (x[1]["device"], x[1]["key"]))

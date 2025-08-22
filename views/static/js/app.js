@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let csvContent = "data:text/csv;charset=utf-8,";
 
                 // 添加CSV头部
-                const headers = ["Timestamp", "Formatted Time"];
+                const headers = ["Time"];
                 data.datasets.forEach(dataset => {
                     headers.push(dataset.label);
                 });
@@ -371,8 +371,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 // 为每个时间点创建一行数据
                 sortedTimePoints.forEach(timestamp => {
                     const date = new Date(timestamp);
-                    const formattedTime = date.toLocaleString();
-                    let row = [timestamp, formattedTime];
+                    // 使用更易读的时间格式：YYYY-MM-DD HH:mm:ss
+                    const formattedTime = date.getFullYear() + '-' +
+                        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(date.getDate()).padStart(2, '0') + ' ' +
+                        String(date.getHours()).padStart(2, '0') + ':' +
+                        String(date.getMinutes()).padStart(2, '0') + ':' +
+                        String(date.getSeconds()).padStart(2, '0');
+                    let row = [formattedTime];
 
                     data.datasets.forEach(dataset => {
                         const point = dataset.data.find(p => p.x === timestamp);
@@ -400,10 +406,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     formatter: function (params) {
                         const date = new Date(params[0].value[0]);
-                        let formattedDate = date.toLocaleDateString();
-                        let formattedTime = date.toLocaleTimeString();
+                        // 使用更易读的时间格式：YYYY-MM-DD HH:mm:ss
+                        const formattedDateTime = date.getFullYear() + '-' +
+                            String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                            String(date.getDate()).padStart(2, '0') + ' ' +
+                            String(date.getHours()).padStart(2, '0') + ':' +
+                            String(date.getMinutes()).padStart(2, '0') + ':' +
+                            String(date.getSeconds()).padStart(2, '0');
 
-                        let result = `<div style="font-weight:bold;margin-bottom:5px;">${formattedDate} ${formattedTime}</div>`;
+                        let result = `<div style="font-weight:bold;margin-bottom:5px;">${formattedDateTime}</div>`;
 
                         params.forEach(param => {
                             result += `<div style="margin: 3px 0">
@@ -424,7 +435,55 @@ document.addEventListener('DOMContentLoaded', function () {
                         dataView: {
                             title: 'Data View',
                             readOnly: true,
-                            lang: ['Data View', 'Close', 'Refresh']
+                            lang: ['Data View', 'Close', 'Refresh'],
+                            optionToContent: function (opt) {
+                                // 自定义数据视图内容
+                                let table = '<table style="width:100%;text-align:center;border-collapse:collapse;"><tbody>';
+
+                                // 表头
+                                table += '<tr style="background-color:#f5f5f5;font-weight:bold;">';
+                                table += '<td style="padding:8px;border:1px solid #ddd;">Time</td>';
+                                opt.series.forEach(series => {
+                                    table += `<td style="padding:8px;border:1px solid #ddd;">${series.name}</td>`;
+                                });
+                                table += '</tr>';
+
+                                // 收集所有时间点
+                                const timePoints = new Set();
+                                opt.series.forEach(series => {
+                                    series.data.forEach(point => {
+                                        timePoints.add(point[0]);
+                                    });
+                                });
+
+                                // 按时间排序
+                                const sortedTimePoints = Array.from(timePoints).sort();
+
+                                // 生成表格行
+                                sortedTimePoints.forEach(timestamp => {
+                                    const date = new Date(timestamp);
+                                    const formattedTime = date.getFullYear() + '-' +
+                                        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                                        String(date.getDate()).padStart(2, '0') + ' ' +
+                                        String(date.getHours()).padStart(2, '0') + ':' +
+                                        String(date.getMinutes()).padStart(2, '0') + ':' +
+                                        String(date.getSeconds()).padStart(2, '0');
+
+                                    table += '<tr>';
+                                    table += `<td style="padding:8px;border:1px solid #ddd;">${formattedTime}</td>`;
+
+                                    opt.series.forEach(series => {
+                                        const point = series.data.find(p => p[0] === timestamp);
+                                        const value = point ? point[1] : '';
+                                        table += `<td style="padding:8px;border:1px solid #ddd;">${value}</td>`;
+                                    });
+
+                                    table += '</tr>';
+                                });
+
+                                table += '</tbody></table>';
+                                return table;
+                            }
                         },
                         myTool1: {
                             show: true,
