@@ -28,6 +28,7 @@ wheels/
 venv/
 env/
 ENV/
+.venv/
 
 # IDE 相关
 .vscode/
@@ -36,7 +37,9 @@ ENV/
 *.swo
 .codebuddy/
 .qoder/
-
+.ruff_cache/
+.DS_Store*
+.python-version
 
 # 日志和输出文件
 log/
@@ -45,6 +48,7 @@ outfile/
 
 # 数据库文件
 *.db
+*.db-*
 *.sqlite
 
 # 临时文件
@@ -60,4 +64,5 @@ test/
 # Docker 相关
 Dockerfile
 .dockerignore
-docker-compose.yml
+compose.yaml
+docker-build.sh

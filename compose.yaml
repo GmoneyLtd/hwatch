@@ -1,0 +1,22 @@
+services:
+  hwatch:
+    image: registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:latest
+    container_name: hwatch4play   
+    hostname: hwatch4play
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    networks:
+      - helloworld
+    environment:
+      - WEB_USERNAME=admin
+      - WEB_PASSWORD=123456
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./log:/app/log
+      - ./outfile:/app/outfile
+      - /etc/localtime:/etc/localtime:ro
+networks:
+  helloworld:
+    external: true
+    name: home4play

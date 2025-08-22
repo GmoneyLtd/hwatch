@@ -18,6 +18,7 @@ WORKDIR /app
 COPY --from=builder /app /app
 # 创建相关文件夹并保证权限属于 appuser
 RUN addgroup -S -g 1000 appuser && adduser -S -u 1000 appuser -G appuser && \
+    mkdir -p /app/log /app/outfile && \
     chown -R appuser:appuser /app
 USER appuser
 # 设置环境变量，使用 `.venv` 作为虚拟环境及服务相关配置
@@ -30,10 +31,7 @@ ENV LOG_LEVEL=DEBUG
 # 暴露应用端口
 EXPOSE 8080
 # 应用程序健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD [ "curl", "-f", "http://localhost/api/healthz" ]
-
-# 暴露端口
-EXPOSE 8080
+HEALTHCHECK --interval=60s --timeout=5s --start-period=20s  --retries=3 CMD [ "curl", "-f", "http://localhost:8080/api/healthz" ]
 
 # 启动命令
-CMD ["uv", "run", "python", "app.py"]
+CMD ["python", "app.py"]
