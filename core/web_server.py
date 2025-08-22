@@ -514,7 +514,7 @@ async def list_outfiles(user: dict = current_user_dependency):
         file_path = os.path.join(outfile_dir, f)
         if os.path.isfile(file_path):
             stat = os.stat(file_path)
-            file_list.append({"name": f, "size": stat.st_size, "created_at": stat.st_ctime})
+            file_list.append({"name": f, "size": stat.st_size, "created_at": stat.st_mtime})
     return sorted(file_list, key=lambda x: x["created_at"], reverse=True)
 
 
