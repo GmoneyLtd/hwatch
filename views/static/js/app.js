@@ -536,13 +536,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     type: 'value',
                     scale: true,
                     min: function (value) {
-                        // 简单逻辑：取最小值的10%然后取整
-                        if (value.min === 0) {
-                            return -1; // 最小值为0时设为-1，留出空间但不显示-1刻度
-                        }
-
-                        const minOffset = Math.floor(value.min * 0.9); // 取最小值的90%并向下取整
-                        return minOffset;
+                        //value.min是数据的最小值
+                        return value.min - (value.max - value.min) * 0.1
+                    },
+                    max: function (value) {
+                        // value.max是数据的最大值
+                        return value.max + (value.max - value.min) * 0.1;
                     },
                     axisLabel: {
                         formatter: function (value) {
