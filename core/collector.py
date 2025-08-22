@@ -21,6 +21,9 @@ from core.config_loader import DeviceConfig, TaskConfig
 # SSH connection pool dictionary, key is (task_alias, device_name) tuple, value is connection object and last used time
 _ssh_connection_pools: dict[tuple[str, str], dict[str, Any]] = {}
 
+# SNMP engine pool dictionary, key is (device_ip, community) tuple, value is engine object and last used time
+_snmp_engine_pools: dict[tuple[str, str], dict[str, Any]] = {}
+
 
 async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncssh.SSHClientConnection:
     """Get SSH connection from connection pool, create new connection if not exists or disconnected"""
@@ -145,6 +148,62 @@ async def _cleanup_ssh_connections():
             del _ssh_connection_pools[pool_key]
 
 
+def _get_snmp_engine(device: DeviceConfig) -> SnmpEngine:
+    """Get SNMP engine from engine pool, create new engine if not exists or invalid"""
+    conn_details = device.connection.snmp
+    community = conn_details.community if conn_details else "public"
+    pool_key = (device.ip, community)
+
+    # Check if engine already exists in engine pool
+    if pool_key in _snmp_engine_pools:
+        engine_entry = _snmp_engine_pools[pool_key]
+        engine = engine_entry["engine"]
+
+        # Update last used time and return existing engine
+        engine_entry["last_used"] = time.time()
+        logger.debug(f"[SNMP] Reusing existing engine for {device.name} ({device.ip})")
+        return engine
+
+    # Create new SNMP engine
+    logger.info(f"[SNMP] Creating new engine for {device.name} ({device.ip})")
+    engine = SnmpEngine()
+
+    # Add engine to pool
+    _snmp_engine_pools[pool_key] = {
+        "engine": engine,
+        "last_used": time.time(),
+        "device_ip": device.ip,
+        "community": community,
+        "device_name": device.name,
+    }
+
+    return engine
+
+
+def _cleanup_snmp_engines():
+    """Clean up timed out SNMP engines (unused for more than 5 minutes)"""
+    current_time = time.time()
+    expired_keys = []
+
+    for pool_key, engine_entry in _snmp_engine_pools.items():
+        if current_time - engine_entry["last_used"] > 300:  # 5 minutes = 300 seconds
+            expired_keys.append(pool_key)
+
+    for pool_key in expired_keys:
+        engine_entry = _snmp_engine_pools[pool_key]
+        engine = engine_entry["engine"]
+        try:
+            if engine.transportDispatcher is not None:
+                engine.transportDispatcher.closeDispatcher()
+            logger.info(
+                f"[SNMP] Cleaning up timed out engine: {engine_entry['device_name']} ({engine_entry['device_ip']})"
+            )
+        except Exception as e:
+            logger.warning(f"[SNMP] Error closing timed out engine: {e}")
+        finally:
+            del _snmp_engine_pools[pool_key]
+
+
 async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
     """Execute single SSH collection task, supporting sequential execution of multiple commands."""
     conn_details = device.connection.ssh
@@ -254,8 +313,10 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         f"[SNMP] Starting task execution {task.alias} on {device.name} ({device.ip}) - OID: {task.oid} - Type: {snmp_type}"
     )
 
-    snmp_engine = SnmpEngine()
     try:
+        # Get SNMP engine from pool (reuse existing or create new)
+        snmp_engine = _get_snmp_engine(device)
+
         # Ensure conn_details is not None
         port = conn_details.port if conn_details else 161
         timeout = conn_details.timeout if conn_details else 10
@@ -316,9 +377,8 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         logger.error(f"[SNMP] Task {task.alias} on {device.name} execution failed: {e}")
         return f"ERROR: {e}"
     finally:
-        # Fix second error: check if transportDispatcher is None
-        if snmp_engine.transportDispatcher is not None:
-            snmp_engine.transportDispatcher.closeDispatcher()
+        # Periodically clean up timed out SNMP engines
+        _cleanup_snmp_engines()
 
 
 def _calculate_value(value: str, operation: str) -> float | None:
