@@ -537,11 +537,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     scale: true,
                     min: function (value) {
                         //value.min是数据的最小值
-                        return value.min - (value.max - value.min) * 0.1
+                        return Math.floor(value.min - (value.max - value.min) * 0.1)
                     },
                     max: function (value) {
                         // value.max是数据的最大值
-                        return value.max + (value.max - value.min) * 0.1;
+                        return Math.ceil(value.max + (value.max - value.min) * 0.1);
                     },
                     axisLabel: {
                         formatter: function (value) {
