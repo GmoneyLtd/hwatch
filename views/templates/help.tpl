@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="/static/img/hwatch.svg">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <style>
         body {
             font-family: "CeraRoundPro-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -189,6 +190,21 @@
             font-size: 0.9rem;
         }
         
+        /* Mermaid diagram styles */
+        .mermaid {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
         @media (max-width: 768px) {
             .help-content {
                 padding: 10px;
@@ -238,27 +254,58 @@
     </div>
     
     <script>
-        // Add special styling to configuration sections
-        document.querySelectorAll('h2, h3').forEach(heading => {
-            if (heading.textContent.toLowerCase().includes('config') || 
-                heading.textContent.toLowerCase().includes('配置')) {
-                const section = document.createElement('div');
-                section.className = 'config-highlight';
-                heading.parentNode.insertBefore(section, heading);
-                section.appendChild(heading);
-                
-                // Move the next few elements into the highlight section
-                let nextElement = section.nextElementSibling;
-                while (nextElement && !nextElement.matches('h1, h2')) {
-                    const elementToMove = nextElement;
-                    nextElement = nextElement.nextElementSibling;
-                    if (elementToMove.matches('h3') && section.children.length > 1) {
-                        // Stop if we hit another h3 (unless it's the first one)
-                        break;
-                    }
-                    section.appendChild(elementToMove);
-                }
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#fff',
+                primaryTextColor: '#000',
+                primaryBorderColor: '#000',
+                lineColor: '#000',
+                secondaryColor: '#f0f0f0',
+                tertiaryColor: '#f5f5f5'
             }
+        });
+        
+        // Add special styling to configuration sections
+        document.addEventListener('DOMContentLoaded', function() {
+            // Convert mermaid code blocks to mermaid divs
+            document.querySelectorAll('pre code').forEach(function(codeBlock) {
+                if (codeBlock.textContent.trim().startsWith('graph ') || 
+                    codeBlock.textContent.trim().startsWith('flowchart ')) {
+                    const mermaidDiv = document.createElement('div');
+                    mermaidDiv.className = 'mermaid';
+                    mermaidDiv.textContent = codeBlock.textContent;
+                    codeBlock.parentElement.parentElement.replaceChild(mermaidDiv, codeBlock.parentElement);
+                }
+            });
+            
+            // Re-initialize mermaid after DOM changes
+            mermaid.init();
+            
+            // Add configuration highlights
+            document.querySelectorAll('h2, h3').forEach(heading => {
+                if (heading.textContent.toLowerCase().includes('config') || 
+                    heading.textContent.toLowerCase().includes('配置')) {
+                    const section = document.createElement('div');
+                    section.className = 'config-highlight';
+                    heading.parentNode.insertBefore(section, heading);
+                    section.appendChild(heading);
+                    
+                    // Move the next few elements into the highlight section
+                    let nextElement = section.nextElementSibling;
+                    while (nextElement && !nextElement.matches('h1, h2')) {
+                        const elementToMove = nextElement;
+                        nextElement = nextElement.nextElementSibling;
+                        if (elementToMove.matches('h3') && section.children.length > 1) {
+                            // Stop if we hit another h3 (unless it's the first one)
+                            break;
+                        }
+                        section.appendChild(elementToMove);
+                    }
+                }
+            });
         });
         
         // Handle close button and keyboard shortcut
