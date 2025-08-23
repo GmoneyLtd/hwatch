@@ -292,6 +292,10 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
         )
         return final_result
 
+    except asyncio.CancelledError:
+        # Handle graceful shutdown - don't log as error since it's expected
+        logger.debug(f"[SSH] Task {task.alias} on {device.name} was cancelled during shutdown")
+        return "CANCELLED: Task cancelled during shutdown"
     except Exception as e:
         error_msg = f"[SSH] Task {task.alias} on {device.name} execution failed: {e}"
         logger.error(error_msg)
@@ -373,6 +377,10 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         logger.success(f"[SNMP] Successfully completed task {task.alias} on {device.name}")
         return result
 
+    except asyncio.CancelledError:
+        # Handle graceful shutdown - don't log as error since it's expected
+        logger.debug(f"[SNMP] Task {task.alias} on {device.name} was cancelled during shutdown")
+        return "CANCELLED: Task cancelled during shutdown"
     except Exception as e:
         logger.error(f"[SNMP] Task {task.alias} on {device.name} execution failed: {e}")
         return f"ERROR: {e}"
@@ -426,9 +434,12 @@ def _calculate_value(value: str, operation: str) -> float | None:
 
 def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     """Parse output results. Returns None to indicate that this result should not be stored."""
-    # Check if output is an error
+    # Check if output is an error or cancellation
     if output.startswith("ERROR:"):
         logger.warning(f"Task {task.alias} execution error, not storing result: {output}")
+        return None
+    elif output.startswith("CANCELLED:"):
+        logger.debug(f"Task {task.alias} was cancelled, not storing result: {output}")
         return None
 
     # If no labels, return original output directly
