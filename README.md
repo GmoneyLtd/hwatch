@@ -687,6 +687,53 @@ services:
       - LOG_LEVEL=INFO
 ```
 
+### Advanced Docker Build and Push
+
+For production deployment and multi-platform support, use the optimized build script:
+
+```bash
+# Use the enhanced Docker build script
+./docker-build.sh
+```
+
+#### Build Script Features
+- **Multi-platform Support**: Builds for linux/amd64 and linux/arm64
+- **Tag Conflict Management**: Handles existing tag conflicts intelligently
+- **Automatic Push**: Pushes to remote registry after successful build
+- **Build Validation**: Verifies successful deployment
+- **Cache Management**: Optional cleanup of build cache
+
+#### Tag Conflict Resolution
+When version tags already exist in the remote repository, the script provides three options:
+
+1. **Overwrite Existing Tags**: Force push to replace existing version
+2. **Cancel Build**: Abort the build process safely
+3. **Use New Version**: Interactively specify a new version number
+
+#### Build Configuration
+The build script supports easy configuration modification:
+
+```bash
+# Configuration parameters (modify in docker-build.sh)
+REGISTRY="registry.cn-hangzhou.aliyuncs.com"
+NAMESPACE="apuer"
+IMAGE_NAME="hwatch"
+VERSION="0.1.1"
+PLATFORMS="linux/amd64,linux/arm64"
+```
+
+#### Usage Instructions
+```bash
+# Pull latest version
+docker pull registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:latest
+
+# Pull specific version
+docker pull registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:0.1.1
+
+# Run container
+docker run -d -p 8000:8000 registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:latest
+```
+
 ### Environment Variables
 - `WEB_USERNAME`: Web interface username (default: admin)
 - `WEB_PASSWORD`: Web interface password (default: 123456)
@@ -1058,6 +1105,76 @@ print(matches.groups() if matches else "No match")
 2. **Retry Strategy**: Set reasonable retry count to avoid resource waste
 3. **Storage Selection**: Choose appropriate storage method based on use case
 4. **Task Grouping**: Group related tasks for execution to reduce connection overhead
+
+## 💾 Git Workflow and Repository Management
+
+### Dual Repository Push Configuration
+
+This project supports an advanced dual repository push workflow for enhanced backup and deployment flexibility. Use the provided sync script for automated setup:
+
+```bash
+# Run the repository synchronization script
+./sync2repo.sh
+```
+
+#### Push Method Selection
+The sync script provides two dual repository push methodologies:
+
+##### Method 1: Separate Remotes (origin + backup)
+- **Benefits**: Independent control and flexible management
+- **Use Case**: When you need granular control over individual repositories
+- **Commands**: 
+  ```bash
+  git push origin --all && git push origin --tags
+  git push backup --all && git push backup --tags
+  ```
+
+##### Method 2: Unified 'all' Remote
+- **Benefits**: Simplified operations and streamlined workflow
+- **Use Case**: When you prefer one-command synchronization
+- **Commands**:
+  ```bash
+  git push all --all && git push all --tags
+  ```
+
+#### Branch Configuration
+- **Default Branch**: `feature/english`
+- **Multi-branch Support**: Pushes all branches and tags simultaneously
+- **Branch Protection**: Maintains existing branch structures
+
+#### Repository Synchronization Features
+- **Interactive Setup**: Choose between separate or unified push methods
+- **Conflict Detection**: Handles existing remote configurations
+- **Detailed Feedback**: Individual success/failure status for each repository
+- **Error Diagnosis**: Comprehensive troubleshooting information
+- **Configuration Validation**: Verifies remote repository accessibility
+
+#### Usage Examples
+```bash
+# Quick setup with interactive selection
+./sync2repo.sh
+
+# View current remote configuration
+git remote -v
+
+# Push to all configured repositories (unified method)
+git push all --all && git push all --tags
+
+# Push to specific repository (separate method)
+git push origin --all
+git push backup --all
+```
+
+#### Repository Configuration
+The script configures the following repository structure:
+- **Primary Repository**: GitHub or main code hosting platform
+- **Backup Repository**: Secondary repository for redundancy
+- **All Remote**: Special remote that pushes to multiple repositories simultaneously
+
+### Branch Management
+- **Feature Branch**: `feature/english` serves as the default development branch
+- **Hot Reload**: Configuration changes without affecting running tasks
+- **Version Control**: Comprehensive commit message standards
 
 ## 🤝 Contributing Guidelines
 

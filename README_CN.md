@@ -720,6 +720,53 @@ services:
       - LOG_LEVEL=INFO
 ```
 
+### 高级Docker构建和推送
+
+对于生产部署和多平台支持，使用优化的构建脚本：
+
+```bash
+# 使用增强Docker构建脚本
+./docker-build.sh
+```
+
+#### 构建脚本特性
+- **多平台支持**: 为linux/amd64和linux/arm64构建
+- **标签冲突管理**: 智能处理现有标签冲突
+- **自动推送**: 构建成功后自动推送到远程仓库
+- **构建验证**: 验证部署成功
+- **缓存管理**: 可选的构建缓存清理
+
+#### 标签冲突解决
+当远程仓库中已存在版本标签时，脚本提供三个选项：
+
+1. **覆盖现有标签**: 强制推送替换现有版本
+2. **取消构建**: 安全中止构建过程
+3. **使用新版本**: 交互式指定新的版本号
+
+#### 构建配置
+构建脚本支持简单的配置修改：
+
+```bash
+# 配置参数（在docker-build.sh中修改）
+REGISTRY="registry.cn-hangzhou.aliyuncs.com"
+NAMESPACE="apuer"
+IMAGE_NAME="hwatch"
+VERSION="0.1.1"
+PLATFORMS="linux/amd64,linux/arm64"
+```
+
+#### 使用说明
+```bash
+# 拉取最新版本
+docker pull registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:latest
+
+# 拉取指定版本
+docker pull registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:0.1.1
+
+# 运行容器
+docker run -d -p 8000:8000 registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:latest
+```
+
 ### 环境变量
 - `WEB_USERNAME`: Web界面用户名 (默认: admin)
 - `WEB_PASSWORD`: Web界面密码 (默认: 123456)
@@ -1091,6 +1138,76 @@ print(matches.groups() if matches else "No match")
 2. **重试策略**: 合理设置重试次数避免资源浪费
 3. **存储选择**: 根据使用场景选择合适的存储方式
 4. **任务分组**: 将相关任务分组执行减少连接开销
+
+## 💾 Git工作流和仓库管理
+
+### 双仓库推送配置
+
+本项目支持高级双仓库推送工作流，为备份和部署提供更大的灵活性。使用提供的同步脚本进行自动设置：
+
+```bash
+# 运行仓库同步脚本
+./sync2repo.sh
+```
+
+#### 推送方式选择
+同步脚本提供两种双仓库推送方法：
+
+##### 方式1：独立远程仓库 (origin + backup)
+- **优点**: 独立控制和灵活管理
+- **适用场景**: 当您需要对单个仓库进行精细控制时
+- **命令**: 
+  ```bash
+  git push origin --all && git push origin --tags
+  git push backup --all && git push backup --tags
+  ```
+
+##### 方式2：统一 'all' 远程仓库
+- **优点**: 简化操作和流线化工作流
+- **适用场景**: 当您喜欢一命令同步时
+- **命令**:
+  ```bash
+  git push all --all && git push all --tags
+  ```
+
+#### 分支配置
+- **默认分支**: `feature/english`
+- **多分支支持**: 同时推送所有分支和标签
+- **分支保护**: 维护现有分支结构
+
+#### 仓库同步特性
+- **交互式设置**: 在独立或统一推送方法之间选择
+- **冲突检测**: 处理现有远程配置
+- **详细反馈**: 每个仓库的单独成功/失败状态
+- **错误诊断**: 全面的故障排除信息
+- **配置验证**: 验证远程仓库可访问性
+
+#### 使用示例
+```bash
+# 快速设置且交互选择
+./sync2repo.sh
+
+# 查看当前远程配置
+git remote -v
+
+# 推送到所有已配置的仓库（统一方法）
+git push all --all && git push all --tags
+
+# 推送到特定仓库（独立方法）
+git push origin --all
+git push backup --all
+```
+
+#### 仓库配置
+脚本配置以下仓库结构：
+- **主仓库**: GitHub或主要代码托管平台
+- **备份仓库**: 用于冗余的辅助仓库
+- **All远程**: 同时推送到多个仓库的特殊远程
+
+### 分支管理
+- **特性分支**: `feature/english`作为默认开发分支
+- **热重载**: 配置更改不影响正在运行的任务
+- **版本控制**: 全面的提交信息标准
 
 ## 🤝 贡献指南
 
