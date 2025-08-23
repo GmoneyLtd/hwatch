@@ -205,6 +205,59 @@
             height: auto;
         }
         
+        /* Mermaid cluster and subgraph styling */
+        .mermaid .cluster rect,
+        .mermaid .cluster polygon {
+            fill: #f8f9fa !important;
+            stroke: #000 !important;
+            stroke-width: 1px !important;
+            stroke-dasharray: none !important;
+        }
+        
+        /* Target dynamically generated Mermaid IDs */
+        [id^="mermaid-"] .cluster rect,
+        [id^="mermaid-"] .cluster polygon {
+            fill: #f8f9fa !important;
+            stroke: #000 !important;
+            stroke-width: 1px !important;
+        }
+        
+        /* Mermaid subgraph background */
+        .mermaid g.cluster rect {
+            fill: #f8f9fa !important;
+            stroke: #000 !important;
+            stroke-width: 1px !important;
+        }
+        
+        /* Mermaid node styling */
+        .mermaid .node rect,
+        .mermaid .node circle,
+        .mermaid .node ellipse,
+        .mermaid .node polygon {
+            fill: #fff !important;
+            stroke: #000 !important;
+            stroke-width: 1px !important;
+        }
+        
+        /* Mermaid text styling */
+        .mermaid .nodeLabel,
+        .mermaid .cluster-label {
+            color: #000 !important;
+            font-size: 11px !important;
+            font-family: inherit !important;
+        }
+        
+        /* Mermaid edge/arrow styling */
+        .mermaid .edgePath path {
+            stroke: #000 !important;
+            stroke-width: 1px !important;
+        }
+        
+        .mermaid .arrowheadPath {
+            fill: #000 !important;
+            stroke: #000 !important;
+        }
+        
         @media (max-width: 768px) {
             .help-content {
                 padding: 10px;
@@ -257,14 +310,65 @@
         // Initialize Mermaid
         mermaid.initialize({
             startOnLoad: true,
-            theme: 'default',
+            theme: 'base',
             themeVariables: {
+                // Basic colors
                 primaryColor: '#fff',
                 primaryTextColor: '#000',
                 primaryBorderColor: '#000',
                 lineColor: '#000',
+                
+                // Secondary colors
                 secondaryColor: '#f0f0f0',
-                tertiaryColor: '#f5f5f5'
+                tertiaryColor: '#f5f5f5',
+                
+                // Background colors
+                background: '#fff',
+                mainBkg: '#fff',
+                secondBkg: '#f8f9fa',
+                tertiaryBkg: '#f0f0f0',
+                
+                // Cluster/Subgraph colors
+                clusterBkg: '#f8f9fa',
+                clusterBorder: '#000',
+                
+                // Node colors
+                primaryColorTone: '#fff',
+                primaryColorLight: '#f8f9fa',
+                primaryColorDark: '#000',
+                
+                // Text colors
+                textColor: '#000',
+                labelTextColor: '#000',
+                nodeTextColor: '#000',
+                
+                // Border colors
+                primaryBorderColorTone: '#000',
+                secondaryBorderColor: '#ccc',
+                tertiaryBorderColor: '#ddd',
+                
+                // Edge colors
+                edgeLabelBackground: '#fff',
+                activeTaskBkgColor: '#f8f9fa',
+                activeTaskBorderColor: '#000',
+                gridColor: '#ccc',
+                section0: '#f8f9fa',
+                section1: '#fff',
+                section2: '#f0f0f0',
+                section3: '#f5f5f5'
+            },
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35
             }
         });
         
