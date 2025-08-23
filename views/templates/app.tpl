@@ -13,7 +13,12 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1><span class="material-symbols-outlined">speed</span> Hwatch - Dashboard</h1>
+            <div class="header-title">
+                <h1><span class="material-symbols-outlined">speed</span> Hwatch - Dashboard</h1>
+                <button class="help-btn" id="help-btn" title="View Documentation & Configuration Guide">
+                    <span class="material-symbols-outlined">help</span>
+                </button>
+            </div>
             <nav class="app-nav">
                 <button class="nav-btn active" data-view="dashboard">
                     <span class="material-symbols-outlined">home</span>

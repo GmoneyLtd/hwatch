@@ -326,6 +326,7 @@ python app.py
 - **Web Interface**: http://localhost:8080
 - **Default Credentials**: admin / 123456
 - **API Documentation**: http://localhost:8080/docs
+- **Help & Documentation**: Click the help icon (?) in the dashboard header or visit http://localhost:8080/help
 
 ## ⚙️ Configuration Guide (config.yaml)
 
@@ -814,6 +815,7 @@ export LOG_LEVEL=INFO
 - **Data Charts**: Historical data trend visualization
 - **Detailed Information**: Hover to view specific values and timestamps
 - **Device Status**: Show device connection status and last update time
+- **Help Documentation**: Click the help icon (?) in the header to access comprehensive documentation and configuration guides
 
 ### Task Management
 - **Task List**: View all configured tasks and their status

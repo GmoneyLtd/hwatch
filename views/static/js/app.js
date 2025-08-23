@@ -831,6 +831,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 初始视图
     switchView('dashboard-view');
+
+    // --- Help Button ---
+    const helpButton = document.getElementById('help-btn');
+    if (helpButton) {
+        helpButton.addEventListener('click', function () {
+            // Open help documentation in a new tab
+            window.open('/help', '_blank');
+        });
+    }
 });
 
 function displayErrorMessage(message, elementId = 'general-error-message') {

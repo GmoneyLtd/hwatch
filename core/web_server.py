@@ -223,6 +223,50 @@ async def root(request: Request, user: dict = current_user_dependency):
     return templates.TemplateResponse("app.tpl", {"request": request})
 
 
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    """Serve help documentation page with README content.
+
+    This endpoint serves a formatted help page containing the project's README
+    documentation, focusing on configuration guide and usage instructions.
+    Note: This page is accessible without authentication to help users understand
+    the system before logging in.
+    """
+    import os
+
+    import markdown
+
+    try:
+        # Try to read the Chinese README first, fall back to English
+        readme_files = [
+            os.path.join(os.path.dirname(__file__), "../README_CN.md"),
+            os.path.join(os.path.dirname(__file__), "../README.md"),
+        ]
+
+        readme_content = ""
+        for readme_file in readme_files:
+            if os.path.exists(readme_file):
+                with open(readme_file, encoding="utf-8") as f:
+                    readme_content = f.read()
+                    break
+
+        if not readme_content:
+            readme_content = "# HWatch Documentation\n\nDocumentation not available."
+
+        # Convert markdown to HTML
+        md = markdown.Markdown(extensions=["tables", "fenced_code", "toc"])
+        html_content = md.convert(readme_content)
+
+        return templates.TemplateResponse("help.tpl", {"request": request, "readme_content": html_content})
+
+    except Exception as e:
+        logger.error(f"Error serving help page: {e}")
+        return HTMLResponse(
+            content="<h1>Help Documentation</h1><p>Sorry, documentation is temporarily unavailable.</p>",
+            status_code=500,
+        )
+
+
 # --- API routes ---
 
 
