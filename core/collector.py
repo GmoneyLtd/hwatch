@@ -208,12 +208,12 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
     """Execute single SSH collection task, supporting sequential execution of multiple commands."""
     conn_details = device.connection.ssh
 
-    # Process command list
-    commands = []
-    if isinstance(task.command, list):
-        commands = [cmd for cmd in task.command if cmd.strip()]  # Filter empty commands
-    elif isinstance(task.command, str):
-        commands = [task.command.strip()] if task.command.strip() else []
+    if not task.ssh:
+        logger.error(f"[SSH] Task {task.alias} missing SSH configuration")
+        return "ERROR: Missing SSH configuration"
+
+    # Process command list from SSH configuration
+    commands = [cmd for cmd in task.ssh.command if cmd.strip()]  # Filter empty commands
 
     if not commands:
         logger.warning(f"[SSH] Task {task.alias} has no valid commands")
@@ -310,11 +310,23 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
 
 
 async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
-    """Execute single SNMP collection task."""
+    """Execute single SNMP collection task, supporting mixed operation types per OID."""
     conn_details = device.connection.snmp
-    snmp_type = getattr(task, "type", "snmpget")  # Default to snmpget
+
+    if not task.snmp:
+        logger.error(f"[SNMP] Task {task.alias} missing SNMP configuration")
+        return "ERROR: Missing SNMP configuration"
+
+    # Get OIDs and their corresponding types from SNMP configuration
+    oids = [oid for oid in task.snmp.oid if oid.strip()]  # Filter empty OIDs
+    snmp_types = task.snmp.type
+
+    if not oids:
+        logger.warning(f"[SNMP] Task {task.alias} has no valid OIDs")
+        return "ERROR: No valid OIDs"
+
     logger.info(
-        f"[SNMP] Starting task execution {task.alias} on {device.name} ({device.ip}) - OID: {task.oid} - Type: {snmp_type}"
+        f"[SNMP] Starting task execution {task.alias} on {device.name} ({device.ip}) - OID count: {len(oids)} with mixed types: {snmp_types}"
     )
 
     try:
@@ -330,52 +342,91 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         # Fix first error: correctly pass parameters to UdpTransportTarget
         transport_target = await UdpTransportTarget.create((device.ip, port), timeout=timeout, retries=retry)
 
-        if snmp_type == "snmpwalk":
-            # Execute SNMP Walk
-            results = []
-            async for error_indication, error_status, error_index, var_binds in walk_cmd(
-                snmp_engine,
-                CommunityData(community, mpModel=0),  # v1
-                transport_target,
-                ContextData(),
-                ObjectType(ObjectIdentity(task.oid)),
-                lexicographicMode=False,
-                ignoreNonIncreasingOid=False,
-            ):
-                if error_indication:
-                    raise RuntimeError(error_indication)
-                elif error_status:
-                    raise RuntimeError(
-                        f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
-                    )
+        # Store all OID execution results
+        all_results = []
 
-                for var_bind in var_binds:
-                    # Only get the value part, consistent with get_cmd
-                    value_str = var_bind[1].prettyPrint()
-                    results.append(value_str)
+        # Execute each OID with its specific type
+        for oid_index, (oid, snmp_type) in enumerate(zip(oids, snmp_types, strict=True), 1):
+            logger.info(f"[SNMP] Processing OID {oid_index}/{len(oids)}: {oid} (type: {snmp_type})")
 
-            result = "\n".join(results)
-        else:
-            # Execute SNMP Get (default behavior)
-            error_indication, error_status, error_index, var_binds = await get_cmd(
-                snmp_engine,
-                CommunityData(community, mpModel=0),  # v1
-                transport_target,
-                ContextData(),
-                ObjectType(ObjectIdentity(task.oid)),
-            )
+            # Execute single OID with its specific type (with retry mechanism)
+            last_exception = None
+            oid_success = False
 
-            if error_indication:
-                raise RuntimeError(error_indication)
-            elif error_status:
-                raise RuntimeError(
-                    f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
-                )
+            for attempt in range(retry + 1):
+                try:
+                    if snmp_type == "snmpwalk":
+                        # Execute SNMP Walk
+                        results = []
+                        async for error_indication, error_status, error_index, var_binds in walk_cmd(
+                            snmp_engine,
+                            CommunityData(community, mpModel=0),  # v1
+                            transport_target,
+                            ContextData(),
+                            ObjectType(ObjectIdentity(oid)),
+                            lexicographicMode=False,
+                            ignoreNonIncreasingOid=False,
+                        ):
+                            if error_indication:
+                                raise RuntimeError(error_indication)
+                            elif error_status:
+                                raise RuntimeError(
+                                    f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
+                                )
 
-            result = var_binds[0][1].prettyPrint()
+                            for var_bind in var_binds:
+                                # Only get the value part, consistent with get_cmd
+                                value_str = var_bind[1].prettyPrint()
+                                results.append(value_str)
 
-        logger.success(f"[SNMP] Successfully completed task {task.alias} on {device.name}")
-        return result
+                        result = "\n".join(results)
+                    else:
+                        # Execute SNMP Get (default behavior)
+                        error_indication, error_status, error_index, var_binds = await get_cmd(
+                            snmp_engine,
+                            CommunityData(community, mpModel=0),  # v1
+                            transport_target,
+                            ContextData(),
+                            ObjectType(ObjectIdentity(oid)),
+                        )
+
+                        if error_indication:
+                            raise RuntimeError(error_indication)
+                        elif error_status:
+                            raise RuntimeError(
+                                f"{error_status.prettyPrint()} at {(error_index and var_binds[int(error_index) - 1][0]) or '?'}"
+                            )
+
+                        result = var_binds[0][1].prettyPrint()
+
+                    if attempt > 0:
+                        logger.info(f"[SNMP] OID {oid_index} processed successfully after {attempt + 1} attempts")
+
+                    all_results.append(f"OID {oid_index}: {oid} ({snmp_type})\n{result or ''}")
+                    oid_success = True
+                    break
+
+                except Exception as e:
+                    last_exception = e
+                    if attempt < retry:
+                        wait_time = 2**attempt  # Exponential backoff
+                        logger.warning(
+                            f"[SNMP] OID {oid_index} attempt {attempt + 1} failed: {e}. Waiting {wait_time} seconds before retry..."
+                        )
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logger.error(f"[SNMP] OID {oid_index} still failed after {attempt + 1} attempts: {e}")
+
+            # If current OID execution failed, log error but continue executing next OID
+            if not oid_success:
+                error_msg = f"OID {oid_index}: {oid} ({snmp_type})\nERROR: {last_exception}"
+                all_results.append(error_msg)
+                logger.warning(f"[SNMP] OID {oid_index} execution failed, continuing to next OID")
+
+        # Combine all OID results
+        final_result = "\n\n".join(all_results)
+        logger.success(f"[SNMP] Successfully completed task {task.alias} on {device.name} - Processed {len(oids)} OIDs")
+        return final_result
 
     except asyncio.CancelledError:
         # Handle graceful shutdown - don't log as error since it's expected
@@ -433,7 +484,7 @@ def _calculate_value(value: str, operation: str) -> float | None:
 
 
 def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
-    """Parse output results. Returns None to indicate that this result should not be stored."""
+    """Parse output results with support for dynamic label generation. Returns None to indicate that this result should not be stored."""
     # Check if output is an error or cancellation
     if output.startswith("ERROR:"):
         logger.warning(f"Task {task.alias} execution error, not storing result: {output}")
@@ -446,47 +497,95 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     if not task.labels:
         return {"raw_output": output}
 
+    # Get parse configuration from appropriate task type
+    parse_config = None
+    if task.protocol == "ssh" and task.ssh:
+        parse_config = task.ssh.parse
+    elif task.protocol == "snmp" and task.snmp:
+        parse_config = task.snmp.parse
+
     # If parse is None, means no regex matching needed, directly match results with labels
-    if not task.parse or not task.parse.regex:
-        # If only one label, use entire output as value for that label
-        if len(task.labels) == 1:
-            raw_value = output.strip()
+    if not parse_config or not parse_config.regex:
+        # For multi-command (SSH) or multi-OID (SNMP) tasks, extract individual results
+        if "Command " in output or "OID " in output:
+            # Extract values from formatted output (Command X: ... or OID X: ...)
+            lines = output.split("\n\n")  # Split by double newlines (separator between commands/OIDs)
+            extracted_values = []
 
-            # Check if calculation is needed
-            if task.parse and task.parse.calculate and len(task.parse.calculate) > 0:
-                calculated_value = _calculate_value(raw_value, task.parse.calculate[0])
-                if calculated_value is None:
-                    logger.warning(f"Task {task.alias} calculation failed, not storing result")
-                    return None
-                return {task.labels[0]: str(calculated_value)}
+            for section in lines:
+                if section.strip():
+                    # Split each section by lines and get the content after the first line (which contains Command/OID info)
+                    section_lines = section.strip().split("\n")
+                    if len(section_lines) > 1:
+                        # Join all lines except the first one (header line)
+                        content = "\n".join(section_lines[1:]).strip()
 
-            return {task.labels[0]: raw_value}
+                        # For SNMP tasks, check if this OID uses snmpwalk and generate dynamic labels
+                        if (
+                            "OID " in section
+                            and task.protocol == "snmp"
+                            and task.snmp
+                            and "snmpwalk" in section_lines[0]
+                        ):  # Check if header contains snmpwalk
+                            # Split content by lines - each line is a separate value from snmpwalk
+                            walk_values = [line.strip() for line in content.split("\n") if line.strip()]
+                            extracted_values.extend(walk_values)  # Add all values from this OID
+                        else:
+                            extracted_values.append(content)
+                    else:
+                        extracted_values.append("")  # Empty if no content
 
-        # If multiple labels, try splitting output by lines
-        lines = [line.strip() for line in output.strip().split("\n") if line.strip()]
-        result = {}
+            # Generate labels based on actual SNMP results structure
+            result = _generate_labels_from_snmp_results(task, lines, parse_config)
 
-        # Match each line result with corresponding label
-        for i, label in enumerate(task.labels):
-            if i < len(lines):
-                raw_value = lines[i]
+            return result
+
+        else:
+            # Single value output - original logic for backward compatibility
+            # If only one label, use entire output as value for that label
+            if len(task.labels) == 1:
+                raw_value = output.strip()
 
                 # Check if calculation is needed
-                if task.parse and task.parse.calculate and i < len(task.parse.calculate) and task.parse.calculate[i]:
-                    calculated_value = _calculate_value(raw_value, task.parse.calculate[i])
+                if parse_config and parse_config.calculate and len(parse_config.calculate) > 0:
+                    calculated_value = _calculate_value(raw_value, parse_config.calculate[0])
                     if calculated_value is None:
-                        logger.warning(f"Task {task.alias} label {label} calculation failed, not storing result")
+                        logger.warning(f"Task {task.alias} calculation failed, not storing result")
                         return None
-                    result[label] = str(calculated_value)
-                else:
-                    result[label] = raw_value
-            else:
-                result[label] = ""  # Set to empty string if insufficient lines
+                    return {task.labels[0]: str(calculated_value)}
 
-        return result
+                return {task.labels[0]: raw_value}
+
+            # If multiple labels, try splitting output by lines
+            lines = [line.strip() for line in output.strip().split("\n") if line.strip()]
+            result = {}
+
+            # Match each line result with corresponding label
+            for i, label in enumerate(task.labels):
+                if i < len(lines):
+                    raw_value = lines[i]
+
+                    # Check if calculation is needed
+                    if (
+                        parse_config
+                        and parse_config.calculate
+                        and i < len(parse_config.calculate)
+                        and parse_config.calculate[i]
+                    ):
+                        calculated_value = _calculate_value(raw_value, parse_config.calculate[i])
+                        if calculated_value is None:
+                            logger.warning(f"Task {task.alias} label {label} calculation failed, not storing result")
+                            return None
+                        result[label] = str(calculated_value)
+                    else:
+                        result[label] = raw_value
+                else:
+                    result[label] = ""  # Set to empty string if insufficient lines
+
+            return result
 
     # Parse output using regular expression
-    match = re.search(task.parse.regex, output)
+    match = re.search(parse_config.regex, output)
 
     if not match:
         logger.warning(f"Task {task.alias} regex matched no content, not storing result.")
@@ -501,14 +600,93 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     result = {}
     for i, (label, value) in enumerate(zip(task.labels, groups, strict=False)):
         # Check if calculation is needed
-        if task.parse.calculate and i < len(task.parse.calculate) and task.parse.calculate[i]:
-            calculated_value = _calculate_value(value, task.parse.calculate[i])
+        if parse_config.calculate and i < len(parse_config.calculate) and parse_config.calculate[i]:
+            calculated_value = _calculate_value(value, parse_config.calculate[i])
             if calculated_value is None:
                 logger.warning(f"Task {task.alias} label {label} calculation failed, not storing result")
                 return None
             result[label] = str(calculated_value)
         else:
             result[label] = value
+
+    return result
+
+
+def _generate_labels_from_snmp_results(task: TaskConfig, result_sections: list[str], parse_config) -> dict[str, Any]:
+    """Generate labels based on actual SNMP results, processing each OID section individually."""
+    result = {}
+    base_labels = task.labels or []
+
+    if not task.snmp:
+        logger.warning(f"Task {task.alias} missing SNMP configuration")
+        return {"raw_output": "\n\n".join(result_sections)}
+
+    oid_index = 0
+    for section in result_sections:
+        if not section.strip():
+            continue
+
+        section_lines = section.strip().split("\n")
+        if len(section_lines) < 1:
+            continue
+
+        # Extract header info and content
+        header_line = section_lines[0]
+        content = "\n".join(section_lines[1:]).strip() if len(section_lines) > 1 else ""
+
+        # Skip if this is not an OID section
+        if "OID " not in header_line:
+            continue
+
+        # Determine SNMP operation type from header
+        is_snmpwalk = "snmpwalk" in header_line
+
+        # Get base label for this OID
+        if oid_index < len(base_labels):
+            base_label = base_labels[oid_index]
+        else:
+            base_label = f"oid_{oid_index + 1}"
+
+        if is_snmpwalk:
+            # Split walk results by lines - each line is a separate value
+            walk_values = [line.strip() for line in content.split("\n") if line.strip()]
+
+            # Generate labels with suffixes for each walk result
+            for i, value in enumerate(walk_values, 1):
+                label = f"{base_label}.{i}"
+
+                # Apply calculation if configured
+                if (
+                    parse_config
+                    and parse_config.calculate
+                    and oid_index < len(parse_config.calculate)
+                    and parse_config.calculate[oid_index]
+                ):
+                    calculated_value = _calculate_value(value, parse_config.calculate[oid_index])
+                    if calculated_value is None:
+                        logger.warning(f"Task {task.alias} label {label} calculation failed, not storing result")
+                        return {}
+                    result[label] = str(calculated_value)
+                else:
+                    result[label] = value
+        else:
+            # Single value from snmpget
+            # Apply calculation if configured
+            if (
+                parse_config
+                and parse_config.calculate
+                and oid_index < len(parse_config.calculate)
+                and parse_config.calculate[oid_index]
+            ):
+                calculated_value = _calculate_value(content, parse_config.calculate[oid_index])
+                if calculated_value is None:
+                    logger.warning(f"Task {task.alias} label {base_label} calculation failed, not storing result")
+                    return {}
+                result[base_label] = str(calculated_value)
+            else:
+                result[base_label] = content
+
+        oid_index += 1
 
     return result
 

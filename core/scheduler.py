@@ -57,14 +57,14 @@ class TaskScheduler:
                     f"Task: {task.alias}",
                     f"Device: {device.name} ({device.ip})",
                     f"Protocol: {task.protocol}",
-                    f"Type: {task.type}",
                 ]
 
                 # Add protocol-specific parameters
-                if task.protocol == "ssh" and task.command:
-                    header_lines.append(f"Command: {str(task.command)}")
-                elif task.protocol == "snmp" and task.oid:
-                    header_lines.append(f"OID: {task.oid}")
+                if task.protocol == "ssh" and task.ssh:
+                    header_lines.append(f"Command: {str(task.ssh.command)}")
+                elif task.protocol == "snmp" and task.snmp:
+                    header_lines.append(f"OID: {task.snmp.oid}")
+                    header_lines.append(f"Type: {task.snmp.type}")
 
                 # Build result content
                 result_lines = ["Results:"]
@@ -153,18 +153,20 @@ class TaskScheduler:
         }
 
         # Add protocol-specific attributes
-        if task.protocol == "ssh":
-            task_data["command"] = task.command
-        elif task.protocol == "snmp":
-            task_data["type"] = task.type
-            task_data["oid"] = task.oid
-
-        # Add parsing configuration
-        if task.parse:
-            task_data["parse"] = {
-                "regex": task.parse.regex,
-                "calculate": task.parse.calculate,
-            }
+        if task.protocol == "ssh" and task.ssh:
+            task_data["ssh"] = {"command": task.ssh.command}
+            if task.ssh.parse:
+                task_data["ssh"]["parse"] = {
+                    "regex": task.ssh.parse.regex,
+                    "calculate": task.ssh.parse.calculate,
+                }
+        elif task.protocol == "snmp" and task.snmp:
+            task_data["snmp"] = {"oid": task.snmp.oid, "type": task.snmp.type}
+            if task.snmp.parse:
+                task_data["snmp"]["parse"] = {
+                    "regex": task.snmp.parse.regex,
+                    "calculate": task.snmp.parse.calculate,
+                }
 
         if task.labels:
             task_data["labels"] = task.labels

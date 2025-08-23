@@ -17,18 +17,59 @@ class ParseConfig(BaseModel):
     calculate: list[str] | None = None
 
 
+class SSHTaskConfig(BaseModel):
+    """SSH-specific task configuration"""
+
+    command: list[str]  # SSH tasks always use multiple commands
+    parse: ParseConfig | None = None  # SSH tasks can have parsing rules
+
+
+class SNMPTaskConfig(BaseModel):
+    """SNMP-specific task configuration"""
+
+    oid: list[str]  # List of OIDs to query
+    type: list[str]  # List of SNMP operation types (snmpget/snmpwalk) corresponding to each OID
+    parse: ParseConfig | None = None  # SNMP tasks can also have parsing rules
+
+    def model_post_init(self, __context) -> None:
+        """Validate that oid and type lists have the same length"""
+        if len(self.oid) != len(self.type):
+            raise ValueError(f"Number of OIDs ({len(self.oid)}) must match number of types ({len(self.type)})")
+
+        # Validate SNMP types
+        valid_types = {"snmpget", "snmpwalk"}
+        for snmp_type in self.type:
+            if snmp_type not in valid_types:
+                raise ValueError(f"Invalid SNMP type '{snmp_type}'. Must be one of: {valid_types}")
+
+
 class TaskConfig(BaseModel):
     alias: str
     enabled: bool = True
     targets: list[str]
-    protocol: str
-    type: str | None = None
-    oid: str | None = None
-    command: list[str] | None = None
+    protocol: str  # "ssh" or "snmp"
     schedule: ScheduleConfig
-    parse: ParseConfig | None = None
     labels: list[str] | None = None
     storage: str | None = "sqlite"
+
+    # Protocol-specific configurations
+    ssh: SSHTaskConfig | None = None
+    snmp: SNMPTaskConfig | None = None
+
+    def model_post_init(self, __context) -> None:
+        """Validate protocol-specific configuration"""
+        if self.protocol == "ssh":
+            if self.ssh is None:
+                raise ValueError("SSH tasks must have 'ssh' configuration")
+            if self.snmp is not None:
+                raise ValueError("SSH tasks cannot have 'snmp' configuration")
+        elif self.protocol == "snmp":
+            if self.snmp is None:
+                raise ValueError("SNMP tasks must have 'snmp' configuration")
+            if self.ssh is not None:
+                raise ValueError("SNMP tasks cannot have 'ssh' configuration")
+        else:
+            raise ValueError(f"Invalid protocol '{self.protocol}'. Must be 'ssh' or 'snmp'")
 
 
 class ConnectionDetails(BaseModel):

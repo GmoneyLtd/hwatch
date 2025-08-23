@@ -352,12 +352,33 @@ async def get_tasks(user: dict = current_user_dependency):
                 target_devices.append(device.name)
                 target_ips.append(device.ip)
 
+        # Generate protocol-specific type information
+        protocol_type = "N/A"
+        protocol_details = {}
+
+        if task.protocol == "ssh" and task.ssh:
+            protocol_type = "SSH Commands"
+            protocol_details = {
+                "command_count": len(task.ssh.command),
+                "commands": task.ssh.command,
+                "has_parse": task.ssh.parse is not None,
+            }
+        elif task.protocol == "snmp" and task.snmp:
+            protocol_type = "SNMP Mixed"
+            protocol_details = {
+                "oid_count": len(task.snmp.oid),
+                "oids": task.snmp.oid,
+                "types": task.snmp.type,
+                "has_parse": task.snmp.parse is not None,
+            }
+
         task_list.append({
             "alias": task.alias,
             "targets": target_devices,
             "target_ips": target_ips,
             "protocol": task.protocol,
-            "type": task.type or "N/A",
+            "type": protocol_type,
+            "protocol_details": protocol_details,
             "schedule_mode": task.schedule.mode or "run_once",
             "schedule_seconds": task.schedule.seconds or 0,
             "storage": task.storage or "null",
