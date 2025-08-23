@@ -1,6 +1,7 @@
 # Git 相关
 .git
 .gitignore
+.sync2repo.sh
 
 # Python 相关
 __pycache__/
