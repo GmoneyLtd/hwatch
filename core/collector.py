@@ -463,20 +463,24 @@ def _calculate_value(value: str, operation: str) -> float | None:
         operand = float(operand_str)
 
         # Perform operation
+        result = None
         if operator == "+":
-            return original_value + operand
+            result = original_value + operand
         elif operator == "-":
-            return original_value - operand
+            result = original_value - operand
         elif operator == "*":
-            return original_value * operand
+            result = original_value * operand
         elif operator == "/":
             if operand == 0:
                 logger.warning(f"Division by zero error: {value} / 0")
                 return None
-            return original_value / operand
+            result = original_value / operand
         else:
             logger.warning(f"Unsupported operator: {operator}")
             return None
+
+        # Round result to 3 decimal places
+        return round(result, 3) if result is not None else None
 
     except (ValueError, TypeError) as e:
         logger.warning(f"Numeric calculation failed: {value} {operation} - {e}")
