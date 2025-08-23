@@ -524,3 +524,40 @@ async def run_task(task: TaskConfig, device: DeviceConfig) -> dict[str, Any] | N
     # Also include raw output in results for file storage convenience
     parsed_results = _parse_output(raw_output, task)
     return parsed_results
+
+
+async def cleanup_all_connections():
+    """Cleanup all SSH connections and SNMP engines for graceful shutdown"""
+    logger.info("Starting cleanup of all connections...")
+
+    # Cleanup SSH connections
+    ssh_cleanup_count = 0
+    for pool_key, conn_entry in list(_ssh_connection_pools.items()):
+        conn = conn_entry["connection"]
+        try:
+            conn.close()
+            await conn.wait_closed()
+            ssh_cleanup_count += 1
+            logger.debug(f"Closed SSH connection: {conn_entry['task']} on {conn_entry['device']}")
+        except Exception as e:
+            logger.warning(f"Error closing SSH connection: {e}")
+        finally:
+            del _ssh_connection_pools[pool_key]
+
+    # Cleanup SNMP engines
+    snmp_cleanup_count = 0
+    for pool_key, engine_entry in list(_snmp_engine_pools.items()):
+        engine = engine_entry["engine"]
+        try:
+            if engine.transportDispatcher is not None:
+                engine.transportDispatcher.closeDispatcher()
+            snmp_cleanup_count += 1
+            logger.debug(f"Closed SNMP engine: {engine_entry['device_name']} ({engine_entry['device_ip']})")
+        except Exception as e:
+            logger.warning(f"Error closing SNMP engine: {e}")
+        finally:
+            del _snmp_engine_pools[pool_key]
+
+    logger.info(
+        f"Connection cleanup completed. Closed {ssh_cleanup_count} SSH connections and {snmp_cleanup_count} SNMP engines"
+    )

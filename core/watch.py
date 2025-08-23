@@ -9,6 +9,9 @@ from loguru import logger
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+# Global observer instance for graceful shutdown
+_global_observer: Observer | None = None
+
 
 class AsyncConfigChangeHandler(FileSystemEventHandler):
     """Async file system event handler for monitoring configuration file changes."""
@@ -76,11 +79,29 @@ def start_watching(config_file: str, callback: Callable[[], Awaitable[None]]):
     Returns:
         Observer instance, or None if startup fails
     """
+    global _global_observer
     try:
-        return _create_and_start_observer(config_file, callback)
+        _global_observer = _create_and_start_observer(config_file, callback)
+        return _global_observer
     except Exception as e:
         logger.error(f"Error occurred while starting file monitoring: {e}")
         return None
+
+
+def stop_watching():
+    """Stop file monitoring for graceful shutdown"""
+    global _global_observer
+    if _global_observer is not None:
+        try:
+            _global_observer.stop()
+            _global_observer.join(timeout=5)  # Wait up to 5 seconds
+            logger.info("File monitoring stopped successfully")
+        except Exception as e:
+            logger.warning(f"Error occurred while stopping file monitoring: {e}")
+        finally:
+            _global_observer = None
+    else:
+        logger.debug("No active file monitoring to stop")
 
 
 def _create_and_start_observer(config_file: str, callback: Callable[[], Awaitable[None]]):

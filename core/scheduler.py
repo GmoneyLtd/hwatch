@@ -282,9 +282,31 @@ class TaskScheduler:
         logger.info("Starting scheduler...")
         self.scheduler.start()
 
-    def stop(self):
-        logger.info("Shutting down scheduler...")
-        self.scheduler.shutdown()
+    def stop(self, wait_timeout: int = 30):
+        """Gracefully shutdown scheduler with timeout
+
+        Args:
+            wait_timeout: Maximum seconds to wait for running jobs to complete
+        """
+        logger.info(f"Shutting down scheduler (waiting up to {wait_timeout}s for running jobs)...")
+
+        # Get count of running jobs before shutdown
+        running_jobs = len(self.scheduler.get_jobs())
+        if running_jobs > 0:
+            logger.info(f"Waiting for {running_jobs} running jobs to complete...")
+
+        try:
+            # Shutdown with wait parameter - this will wait for running jobs to complete
+            self.scheduler.shutdown(wait=True)
+            logger.info("Scheduler shutdown completed successfully")
+        except Exception as e:
+            logger.warning(f"Error during scheduler shutdown: {e}")
+            # Force shutdown if graceful shutdown fails
+            try:
+                self.scheduler.shutdown(wait=False)
+                logger.info("Forced scheduler shutdown completed")
+            except Exception as force_e:
+                logger.error(f"Failed to force shutdown scheduler: {force_e}")
 
     def remove_job(self, job_id: str):
         """Remove specified job from scheduler"""
