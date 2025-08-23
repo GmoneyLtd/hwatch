@@ -7,44 +7,44 @@
     <link rel="icon" type="image/svg+xml" href="/static/img/hwatch.svg">
     <style>
         body {
-            font-family: "CeraRoundPro-Regular", BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f8f9fa;
+            font-family: "CeraRoundPro-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
             margin: 0;
             padding: 0;
+            font-size: 12px;
         }
         
         .help-container {
-            max-width: 1200px;
+            max-width: 900px;
             margin: 0 auto;
-            background: white;
+            background: #fff;
             min-height: 100vh;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
         
         .help-header {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white;
-            padding: 30px;
+            background: #00000061;
+            color: #fff;
+            padding: 10px;
             text-align: center;
-            border-bottom: 4px solid #0056b3;
+            border-bottom: 1px solid #000;
         }
         
         .help-header h1 {
             margin: 0;
-            font-size: 2.5rem;
-            font-weight: 300;
+            font-size: 1.3rem;
+            font-weight: 400;
         }
         
         .help-header p {
-            font-size: 1.1rem;
-            margin: 5px 0;
+            margin: 5px 0 0 0;
+            font-size: 0.8rem;
             opacity: 0.9;
         }
         
         .help-content {
-            padding: 40px;
+            padding: 15px;
         }
         
         .markdown-content {
@@ -54,144 +54,171 @@
         .markdown-content h1, 
         .markdown-content h2, 
         .markdown-content h3 {
-            color: #212529;
-            margin-top: 5px;
-            margin-bottom: 1rem;
+            color: #000;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
         }
         
         .markdown-content h1 {
-            font-size: 2rem;
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 10px;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
         }
         
         .markdown-content h2 {
-            font-size: 1.5rem;
-            border-bottom: 2px solid #6c757d;
-            padding-bottom: 4px;
+            font-size: 1rem;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 2px;
         }
         
         .markdown-content h3 {
-            font-size: 1.25rem;
-            color: #495057;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        
+        .markdown-content p {
+            font-size: 12px;
+            margin: 0.5rem 0;
         }
         
         .markdown-content code {
-            background: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 4px;
+            background: #f0f0f0;
+            padding: 2px 3px;
+            border-radius: 2px;
             font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #e83e8c;
+            font-size: 10px;
+            color: #000;
+            border: 1px solid #ccc;
         }
         
         .markdown-content pre {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            padding: 20px;
+            background: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 8px;
             overflow-x: auto;
-            margin: 20px 0;
+            margin: 8px 0;
         }
         
         .markdown-content pre code {
             background: none;
             padding: 0;
-            color: #495057;
-            font-size: 0.875rem;
+            color: #000;
+            font-size: 10px;
+            border: none;
         }
         
         .markdown-content table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 8px 0;
+            background: #fff;
+            border: 1px solid #ccc;
+            font-size: 11px;
         }
         
         .markdown-content th,
         .markdown-content td {
-            border: 1px solid #dee2e6;
-            padding: 12px 15px;
+            border: 1px solid #ccc;
+            padding: 4px 6px;
             text-align: left;
         }
         
         .markdown-content th {
-            background: #e9ecef;
+            background: #f0f0f0;
             font-weight: 600;
-            color: #495057;
+            color: #000;
         }
         
         .markdown-content tr:nth-child(even) {
-            background: #f8f9fa;
+            background: #f8f8f8;
         }
         
         .markdown-content blockquote {
-            border-left: 4px solid #007bff;
-            margin: 20px 0;
-            padding: 10px 20px;
-            background: #f8f9fa;
+            border-left: 2px solid #000;
+            margin: 8px 0;
+            padding: 5px 10px;
+            background: #f5f5f5;
             font-style: italic;
+            font-size: 11px;
         }
         
         .markdown-content ul, 
         .markdown-content ol {
-            padding-left: 30px;
-            margin: 15px 0;
+            padding-left: 18px;
+            margin: 6px 0;
+            font-size: 12px;
         }
         
         .markdown-content li {
-            margin: 8px 0;
+            margin: 2px 0;
         }
         
         .close-button {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #dc3545;
-            color: white;
+            top: 10px;
+            right: 10px;
+            background: #000;
+            color: #fff;
             border: none;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
+            width: 26px;
+            height: 26px;
+            font-size: 12px;
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             transition: all 0.2s;
             z-index: 1000;
         }
         
         .close-button:hover {
-            background: #c82333;
+            background: #333;
             transform: scale(1.1);
         }
         
         .config-highlight {
-            background: linear-gradient(135deg,rgb(247, 247, 247));
-            border: 2px solidrgb(135, 142, 149);
-            border-radius: 4px;
-            padding: 5px;
-            margin: 10px 0;
+            background: #f5f5f5;
+            border: 1px solid #000;
+            border-radius: 3px;
+            padding: 8px;
+            margin: 8px 0;
         }
         
         .config-highlight h3 {
-            color:rgb(178, 185, 192);
+            color: #000;
             margin-top: 0;
+            font-size: 0.9rem;
         }
         
         @media (max-width: 768px) {
             .help-content {
-                padding: 20px;
+                padding: 10px;
             }
             
             .help-header {
-                padding: 20px;
+                padding: 10px;
             }
             
             .help-header h1 {
-                font-size: 2rem;
+                font-size: 1.1rem;
+            }
+            
+            .markdown-content h1 {
+                font-size: 1rem;
+            }
+            
+            .markdown-content h2 {
+                font-size: 0.9rem;
+            }
+            
+            .markdown-content h3 {
+                font-size: 0.8rem;
+            }
+            
+            .markdown-content p {
+                font-size: 11px;
             }
         }
+    </style>
     </style>
 </head>
 <body>
