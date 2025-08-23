@@ -192,11 +192,11 @@ if [ "$USE_SEPARATE_REMOTES" = true ]; then
             echo "   可能的原因：认证失败、网络问题或远程仓库不存在"
         fi
         
-        # 推送所有标签
-        if git push origin --tags 2>/dev/null; then
-            echo "✅ 成功推送所有标签到 origin"
+        # 推送所有标签（强制推送）
+        if git push origin --tags --force 2>/dev/null; then
+            echo "✅ 成功强制推送所有标签到 origin"
         else
-            echo "⚠️  推送标签到 origin 失败（可能没有标签或认证问题）"
+            echo "⚠️  强制推送标签到 origin 失败（可能没有标签或认证问题）"
         fi
     else
         echo "⚠️  origin 远程仓库不存在，跳过推送"
@@ -216,11 +216,11 @@ if [ "$USE_SEPARATE_REMOTES" = true ]; then
             echo "   可能的原因：认证失败、网络问题或远程仓库不存在"
         fi
         
-        # 推送所有标签
-        if git push backup --tags 2>/dev/null; then
-            echo "✅ 成功推送所有标签到 backup"
+        # 推送所有标签（强制推送）
+        if git push backup --tags --force 2>/dev/null; then
+            echo "✅ 成功强制推送所有标签到 backup"
         else
-            echo "⚠️  推送标签到 backup 失败（可能没有标签或认证问题）"
+            echo "⚠️  强制推送标签到 backup 失败（可能没有标签或认证问题）"
         fi
     else
         echo "⚠️  backup 远程仓库不存在，跳过推送"
@@ -255,9 +255,9 @@ else
             PUSH_BRANCHES_OUTPUT=$(git push all --all 2>&1)
             PUSH_BRANCHES_RESULT=$?
             
-            # 推送所有标签
-            echo "📋 推送所有标签..."
-            PUSH_TAGS_OUTPUT=$(git push all --tags 2>&1)
+            # 推送所有标签（强制推送）
+            echo "📋 强制推送所有标签..."
+            PUSH_TAGS_OUTPUT=$(git push all --tags --force 2>&1)
             PUSH_TAGS_RESULT=$?
             
             # 分析推送结果
@@ -415,25 +415,25 @@ echo "💡 日常使用提示:"
 if [ "$USE_SEPARATE_REMOTES" = true ]; then
     echo "   📋 使用独立远程仓库方式的推送命令:"
     echo "   - 推送所有分支到主仓库: git push origin --all"
-    echo "   - 推送所有标签到主仓库: git push origin --tags"
+    echo "   - 推送所有标签到主仓库: git push origin --tags --force"
     echo "   - 推送所有分支到备份仓库: git push backup --all"
-    echo "   - 推送所有标签到备份仓库: git push backup --tags"
+    echo "   - 推送所有标签到备份仓库: git push backup --tags --force"
     echo "   - 推送当前分支到主仓库: git push origin"
     echo "   - 推送当前分支到备份仓库: git push backup"
     echo "   - 推送特定分支到主仓库: git push origin <branch-name>"
     echo "   - 推送特定分支到备份仓库: git push backup <branch-name>"
-    echo "   - 创建并推送新标签到主仓库: git tag <tag-name> && git push origin --tags"
-    echo "   - 创建并推送新标签到备份仓库: git tag <tag-name> && git push backup --tags"
-    echo "   - 同时推送到两个仓库: git push origin --all && git push origin --tags && git push backup --all && git push backup --tags"
+    echo "   - 创建并推送新标签到主仓库: git tag <tag-name> && git push origin --tags --force"
+    echo "   - 创建并推送新标签到备份仓库: git tag <tag-name> && git push backup --tags --force"
+    echo "   - 同时推送到两个仓库: git push origin --all && git push origin --tags --force && git push backup --all && git push backup --tags --force"
 else
     echo "   📋 使用统一远程仓库方式的推送命令:"
-    echo "   - 推送所有分支和标签到两个仓库: git push all --all && git push all --tags"
+    echo "   - 推送所有分支和标签到两个仓库: git push all --all && git push all --tags --force"
     echo "   - 推送当前分支到两个仓库: git push all"
     echo "   - 推送特定分支到两个仓库: git push all <branch-name>"
-    echo "   - 推送特定标签到两个仓库: git push all <tag-name>"
-    echo "   - 创建并推送新标签: git tag <tag-name> && git push all --tags"
-    echo "   - 只推送到主仓库: git push origin --all && git push origin --tags"
-    echo "   - 只推送到备份仓库: git push backup --all && git push backup --tags (备注：backup 远程需要手动添加)"
+    echo "   - 推送特定标签到两个仓库: git push all <tag-name> --force"
+    echo "   - 创建并推送新标签: git tag <tag-name> && git push all --tags --force"
+    echo "   - 只推送到主仓库: git push origin --all && git push origin --tags --force"
+    echo "   - 只推送到备份仓库: git push backup --all && git push backup --tags --force (备注：backup 远程需要手动添加)"
 fi
 echo ""
 echo "📚 更多信息:"
