@@ -43,7 +43,7 @@ devices:
   name: AP-205
 tasks:
 - alias: fgProcessorUsage_per
-  enabled: false
+  enabled: true
   labels:
   - fgProcessorUsage.1
   - fgProcessorUsage.2

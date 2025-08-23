@@ -7,7 +7,7 @@ set -e
 
 # 配置参数
 REGISTRY="registry.cn-hangzhou.aliyuncs.com"
-NAMESPACE="apuer"
+NAMESPACE="gmoneyltd"
 IMAGE_NAME="hwatch"
 VERSION="0.1.1"
 PLATFORMS="linux/amd64,linux/arm64"
@@ -17,7 +17,7 @@ IMAGE_BASE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}"
 VERSION_TAG="${IMAGE_BASE}:${VERSION}"
 LATEST_TAG="${IMAGE_BASE}:latest"
 
-echo "🚀 开始 HWatch Docker 镜像构建和推送流程..."
+echo "======== 🚀 开始 HWatch Docker 镜像构建和推送流程 ========"
 echo ""
 echo "📋 构建配置:"
 echo "   仓库地址: ${REGISTRY}"
