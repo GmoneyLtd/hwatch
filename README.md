@@ -691,6 +691,417 @@ services:
 - `WEB_PASSWORD`: Web interface password (default: 123456)
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
+## 🔐 Web Account Management
+
+### Default Login Information
+- **Username**: `admin`
+- **Password**: `123456`
+
+### Custom Account Configuration
+Customize login accounts via environment variables:
+
+```bash
+# Set custom username and password
+export WEB_USERNAME=myuser
+export WEB_PASSWORD=mypassword
+
+# Start the application
+python app.py
+```
+
+### Session Management
+- **Session Duration**: 8-hour absolute expiration time
+- **Security Tokens**: Uses encrypted secure random tokens
+- **Automatic Cleanup**: System automatically cleans expired sessions
+- **Browser Closure**: Sessions are automatically cleared when browser is closed
+- **Concurrent Login**: Supports multiple users logging in simultaneously
+
+### Security Features
+- Password hash storage (using bcrypt)
+- Session token encryption
+- Automatic logout mechanism
+- Session hijacking prevention
+
+## 📋 Log System Configuration
+
+### Log Level Settings
+
+**Priority Order (High to Low):**
+1. **Environment Variable `LOG_LEVEL`** (Highest Priority)
+2. **Command Line Argument `--level`** (Medium Priority)
+3. **Default Value `WARNING`** (Lowest Priority)
+
+### Usage Methods
+
+**Method 1: Environment Variable Setting (Recommended)**
+```bash
+# Set log level
+export LOG_LEVEL=INFO
+python app.py
+
+# Supported levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+```
+
+**Method 2: Command Line Arguments**
+```bash
+# Temporarily set log level
+python app.py --level DEBUG
+
+# View help information
+python app.py --help
+```
+
+**Method 3: Combined Usage**
+```bash
+# Environment variable has higher priority, will ignore command line arguments
+export LOG_LEVEL=ERROR
+python app.py --level DEBUG  # Actually uses ERROR level
+```
+
+### Log Level Description
+
+| Level | Purpose | Output Content |
+|-------|---------|----------------|
+| `DEBUG` | Development debugging | Detailed debug info, variable values, execution flow |
+| `INFO` | General information | App startup, task execution, config loading, etc. |
+| `WARNING` | Warning information | Config issues, connection exceptions, retry operations, etc. |
+| `ERROR` | Error information | Task failures, connection errors, parsing failures, etc. |
+| `CRITICAL` | Critical errors | System crashes, fatal errors, etc. |
+
+### Log File Locations
+
+```
+log/
+├── app.log          # Main application log (rotated by date)
+├── scheduler.log    # Task scheduling log
+└── error.log        # Error log (ERROR level and above)
+```
+
+### Log Configuration Features
+
+- **Auto Rotation**: Log files automatically rotate by date
+- **Size Limit**: Maximum 10MB per log file
+- **Retention Policy**: Keep logs for the last 7 days
+- **Unified Format**: Timestamp | Level | Module | Message
+- **Color Output**: Console output supports color differentiation by level
+
+### Log Usage Recommendations
+
+**Development Environment:**
+```bash
+export LOG_LEVEL=DEBUG
+```
+
+**Production Environment:**
+```bash
+export LOG_LEVEL=WARNING
+```
+
+**Troubleshooting:**
+```bash
+export LOG_LEVEL=INFO
+```
+
+## 📊 Web Interface Usage
+
+### Login Access
+1. Access http://localhost:8080 after starting the application
+2. Login with default account or custom account
+3. Session is valid for 8 hours, re-login required after expiration
+
+### Dashboard Features
+- **Real-time Monitoring**: Display execution status of all enabled tasks
+- **Data Charts**: Historical data trend visualization
+- **Detailed Information**: Hover to view specific values and timestamps
+- **Device Status**: Show device connection status and last update time
+
+### Task Management
+- **Task List**: View all configured tasks and their status
+- **Enable Control**: Dynamically enable/disable tasks
+- **Configuration Editing**: Real-time config file editing (restart required for effect)
+- **Execution History**: View task execution history and results
+
+### Data Viewing
+- **SQLite Data**: View charts and historical trends in web interface
+- **File Data**: Raw output saved in `outfile/` directory
+- **Real-time Updates**: Data automatically refreshes, no manual refresh needed
+- **Export Function**: Support data export to CSV format
+
+## 🔧 Advanced Features
+
+### SSH Connection Pool
+System automatically manages SSH connection pool for improved performance:
+- **Connection Reuse**: Connections for same tasks and devices are reused
+- **Auto Cleanup**: Connections unused for more than 10 minutes are automatically cleaned
+- **Health Check**: Connection status is checked before use
+- **Concurrency Control**: Maximum 5 concurrent connections per device
+
+### Error Handling Mechanism
+- **Auto Retry**: Retry according to configuration when connection fails
+- **Exponential Backoff**: Retry intervals use exponential backoff strategy (2^attempt seconds)
+- **Timeout Control**: Independent timeout settings for connection and command execution
+- **Detailed Logs**: Record all error information for troubleshooting
+
+### Data Storage Strategy
+- **SQLite**: Structured data storage, supports chart display and historical queries
+- **File**: Raw output storage, convenient for debugging and data auditing
+- **Null**: No result storage, suitable for operational commands
+
+### Task Scheduling Mechanism
+- **Interval Mode**: Fixed interval execution, next execution calculated based on task start time
+- **Delay Mode**: Delayed execution, wait specified time after task completion before next execution
+- **Frequency Control**: Support limiting task execution count
+- **Smart Incremental Update**: Only refresh changed tasks when config changes, keep other tasks running
+
+### 🔄 Incremental Update Mechanism
+
+#### Working Principle
+System intelligently identifies configuration changes through task signatures (MD5 hash) for precise incremental updates:
+
+1. **Task Signature Generation**: Generate MD5 signature for each task's key configuration
+2. **Configuration Comparison**: Compare new and old configurations to precisely identify change types
+3. **Categorized Processing**: Execute different update strategies based on change types
+4. **State Preservation**: Unchanged tasks maintain running state unaffected
+
+#### Change Type Processing
+
+| Change Type | Processing Strategy | Impact Scope |
+|-------------|--------------------|--------------|
+| **New Tasks** | Directly add to scheduler | New tasks only |
+| **Deleted Tasks** | Remove all related jobs and counts | Deleted tasks only |
+| **Modified Tasks** | Remove first then re-add | Modified tasks only |
+| **Unchanged Tasks** | Keep as is | No impact |
+
+#### Task Signature Includes
+- Task basic info: alias, enabled, protocol, targets, storage
+- Schedule config: frequency, mode, seconds
+- Protocol-specific config: SSH commands, SNMP OID and type
+- Parse config: regex, mathematical operations, labels
+
+#### Incremental Update Log Example
+```
+Configuration changes detected, starting reload...
+Starting incremental task scheduling update...
+Configuration changes detected: added 1, removed 0, modified 2, unchanged 5
+Deleted task: old_task
+Updated task: fgSysMemUsage
+Updated task: fgProcessorUsage_per
+Added task: new_monitoring_task
+Incremental update completed! Processed 4 changes
+Configuration reload and task incremental update successful!
+```
+
+#### Performance Advantages
+- **Reduced Interruption**: Running tasks won't be restarted unnecessarily
+- **Improved Stability**: Avoid connection rebuilding and data loss from full refresh
+- **Resource Saving**: Only process truly changed tasks, reduce system overhead
+- **Faster Response**: Incremental updates respond faster than full updates
+- **Connection Preservation**: SSH connections in pool are preserved, avoiding reconnection
+
+#### Duplicate Prevention Mechanism
+System has comprehensive duplicate processing prevention:
+- **File System Events**: Editor saves may trigger multiple file system events
+- **Configuration Comparison**: Second detection with no actual changes will skip processing
+- **Log Recording**: Clear records of each detection result for debugging
+
+#### Usage Recommendations
+1. **Batch Modifications**: Recommend completing multiple config changes at once to reduce frequent updates
+2. **Test Verification**: Observe logs after modifications to confirm update results
+3. **Backup Configuration**: Backup config files before important changes
+4. **Monitor Impact**: Pay attention to task execution status and performance after modifications
+
+## 📝 System Log Files
+
+### Log File Structure
+```
+log/
+├── app.log              # Main application log
+├── scheduler.log        # Task scheduling dedicated log
+├── error.log           # Error level log
+└── debug.log           # Debug level log (DEBUG mode only)
+
+outfile/
+├── task_alias_device_name.log    # Task output for file storage mode
+└── ...
+```
+
+### Log Content Description
+- **Application Startup**: System initialization, config loading, service startup info
+- **Task Execution**: Execution status, duration, result statistics for each task
+- **Connection Management**: SSH/SNMP connection establishment, reuse, cleanup process
+- **Error Information**: Connection failures, command execution failures, parsing errors, etc.
+- **Performance Metrics**: Task execution time, connection pool status, memory usage, etc.
+
+## 🚨 Important Notes
+
+### Security Considerations
+1. **Configuration File Security**: `config.yaml` contains device passwords, please set appropriate file permissions
+2. **Network Security**: Ensure monitoring network security to avoid password leakage
+3. **Web Access**: Production environment recommends configuring HTTPS and strong passwords
+4. **Log Security**: Log files may contain sensitive information, pay attention to access control
+
+### Network Requirements
+1. **Connectivity**: Monitoring host must be able to access target device SSH/SNMP ports
+2. **Firewall**: Ensure relevant ports (SSH:22, SNMP:161) are open
+3. **Bandwidth**: Frequent collection may generate network traffic, pay attention to bandwidth planning
+4. **Latency**: Network latency affects task execution time, set reasonable timeout values
+
+### Performance Recommendations
+1. **Collection Interval**: Set reasonably based on data change frequency and network conditions
+2. **Concurrency Control**: Avoid executing too many tasks simultaneously causing resource competition
+3. **Storage Selection**: Use SQLite for frequent queries, file storage for debugging and auditing
+4. **Data Cleanup**: Regularly clean historical data to avoid oversized database
+
+### Maintenance Recommendations
+1. **Regular Backup**: Backup configuration files and important data
+2. **Log Rotation**: System automatically rotates logs, pay attention to disk space
+3. **Monitoring Alerts**: Recommend configuring external monitoring system to monitor HWatch running status
+4. **Version Updates**: Follow project updates, upgrade promptly to fix security issues
+
+## 🔍 Troubleshooting Guide
+
+### Common Issues and Solutions
+
+#### SSH Connection Issues
+**Symptoms**: SSH tasks show connection failure
+**Troubleshooting Steps**:
+1. Check device IP address and port configuration
+2. Verify username and password are correct
+3. Test network connectivity: `ping <device_ip>`
+4. Manual SSH test: `ssh username@device_ip`
+5. Check device SSH service status
+6. View detailed error logs
+
+**Common Causes**:
+- Network unreachable or firewall blocking
+- Authentication information error
+- SSH service not started or configuration issues
+- Device resource insufficient to establish new connections
+
+#### SNMP Query Issues
+**Symptoms**: SNMP tasks no response or return empty values
+**Troubleshooting Steps**:
+1. Verify SNMP community string configuration
+2. Check device SNMP service status
+3. Test with snmpwalk tool: `snmpwalk -v2c -c community device_ip oid`
+4. Confirm OID is correct and device supported
+5. Check if SNMP port is open
+
+#### Data Parsing Issues
+**Symptoms**: Regular expression doesn't match or parsing fails
+**Troubleshooting Steps**:
+1. Set log level to DEBUG to view raw output
+2. Use online regex testing tools for verification
+3. Ensure capture group count matches labels count
+4. Check if multiline matching needs `(?s)` flag
+5. Verify mathematical operation expression syntax
+
+#### Web Interface Issues
+**Symptoms**: Cannot access web interface or login failure
+**Troubleshooting Steps**:
+1. Check if application started normally
+2. Confirm port 8080 is not occupied
+3. Verify login credentials are correct
+4. Check browser console error messages
+5. View web server errors in application logs
+
+### Debugging Tips
+
+#### Enable Detailed Logging
+```bash
+export LOG_LEVEL=DEBUG
+python app.py
+```
+
+#### Single Task Testing
+Temporarily disable other tasks, only enable the task needing debugging:
+```yaml
+- alias: "debug_task"
+  enabled: true    # Only enable this task
+  # ... other configuration
+```
+
+#### Manual Command Testing
+Manually execute commands on device to compare output format:
+```bash
+ssh admin@device_ip "show version"
+```
+
+#### Regular Expression Debugging
+Use Python interactive environment to test regular expressions:
+```python
+import re
+pattern = r"(?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)"
+text = "your_device_output_here"
+matches = re.search(pattern, text)
+print(matches.groups() if matches else "No match")
+```
+
+## 📈 Performance Optimization Recommendations
+
+### System Level Optimization
+1. **Resource Configuration**: Ensure sufficient CPU and memory resources
+2. **Network Optimization**: Use high-speed stable network connections
+3. **Storage Optimization**: Use SSD storage to improve database performance
+4. **System Tuning**: Adjust operating system network parameters
+
+### Application Level Optimization
+1. **Reasonable Intervals**: Avoid overly frequent data collection
+2. **Batch Operations**: Execute multiple commands in single SSH session
+3. **Connection Reuse**: System automatically manages SSH connection pool
+4. **Async Processing**: Tasks execute in parallel for improved efficiency
+
+### Configuration Optimization
+1. **Timeout Settings**: Adjust timeout according to network conditions
+2. **Retry Strategy**: Set reasonable retry count to avoid resource waste
+3. **Storage Selection**: Choose appropriate storage method based on use case
+4. **Task Grouping**: Group related tasks for execution to reduce connection overhead
+
+## 🤝 Contributing Guidelines
+
+### Development Environment Setup
+```bash
+# Clone project
+git clone <repository-url>
+cd hwatch
+
+# Install development dependencies
+uv sync --dev
+
+# Run tests
+python -m pytest test/
+
+# Code formatting
+ruff format .
+
+# Code checking
+ruff check .
+```
+
+### Submission Standards
+- Follow Conventional Commits specification
+- Provide detailed commit messages
+- Include necessary test cases
+- Update relevant documentation
+
+### Issue Reporting
+When reporting issues, please provide:
+1. Detailed problem description
+2. Reproduction steps
+3. System environment information
+4. Relevant log output
+5. Configuration file (after desensitization)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**HWatch** - Making network device monitoring simple and efficient!
+
+For questions or suggestions, feel free to submit Issues or Pull Requests.
+
 ## 🔒 Security Considerations
 
 ### Authentication
