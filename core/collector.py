@@ -24,6 +24,14 @@ _ssh_connection_pools: dict[tuple[str, str], dict[str, Any]] = {}
 # SNMP engine pool dictionary, key is (device_ip, community) tuple, value is engine object and last used time
 _snmp_engine_pools: dict[tuple[str, str], dict[str, Any]] = {}
 
+# Regex compilation cache
+_regex_cache: dict[str, re.Pattern] = {}
+
+# Track last cleanup time to avoid frequent cleanup calls
+_last_ssh_cleanup: float = 0
+_last_snmp_cleanup: float = 0
+CLEANUP_INTERVAL = 300  # Clean up every 5 minutes
+
 
 async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncssh.SSHClientConnection:
     """Get SSH connection from connection pool, create new connection if not exists or disconnected"""
@@ -123,7 +131,14 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
 
 async def _cleanup_ssh_connections():
     """Clean up timed out SSH connections (unused for more than 10 minutes)"""
+    global _last_ssh_cleanup
     current_time = time.time()
+
+    # Only clean up if enough time has passed since last cleanup
+    if current_time - _last_ssh_cleanup < CLEANUP_INTERVAL:
+        return
+
+    _last_ssh_cleanup = current_time
     expired_keys = []
 
     for pool_key, conn_entry in _ssh_connection_pools.items():
@@ -177,7 +192,14 @@ def _get_snmp_engine(device: DeviceConfig) -> SnmpEngine:
 
 def _cleanup_snmp_engines():
     """Clean up timed out SNMP engines (unused for more than 5 minutes)"""
+    global _last_snmp_cleanup
     current_time = time.time()
+
+    # Only clean up if enough time has passed since last cleanup
+    if current_time - _last_snmp_cleanup < CLEANUP_INTERVAL:
+        return
+
+    _last_snmp_cleanup = current_time
     expired_keys = []
 
     for pool_key, engine_entry in _snmp_engine_pools.items():
@@ -347,7 +369,7 @@ async def _run_ssh_task(
         _ssh_connection_pools.pop(pool_key, None)
         return f"ERROR: {e}"
     finally:
-        # Periodically clean up timed out connections
+        # Only clean up periodically to reduce CPU overhead
         await _cleanup_ssh_connections()
 
 
@@ -494,7 +516,7 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
         logger.error(f"[SNMP] Task {task.alias} on {device.name} execution failed: {e}")
         return f"ERROR: {e}"
     finally:
-        # Periodically clean up timed out SNMP engines
+        # Only clean up periodically to reduce CPU overhead
         _cleanup_snmp_engines()
 
 
@@ -543,6 +565,17 @@ def _calculate_value(value: str, operation: str) -> float | None:
     except (ValueError, TypeError) as e:
         logger.warning(f"Numeric calculation failed: {value} {operation} - {e}")
         return None
+
+
+def _get_compiled_regex(pattern: str) -> re.Pattern:
+    """Get compiled regex from cache or compile and cache it"""
+    if pattern not in _regex_cache:
+        try:
+            _regex_cache[pattern] = re.compile(pattern)
+        except re.error as e:
+            logger.error(f"Invalid regex pattern: {pattern} - {e}")
+            raise
+    return _regex_cache[pattern]
 
 
 def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
@@ -665,7 +698,8 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
             return result
 
     # Parse output using regular expression
-    match = re.search(parse_config.regex, output)
+    compiled_regex = _get_compiled_regex(parse_config.regex)
+    match = compiled_regex.search(output)
 
     if not match:
         logger.warning(f"Task {task.alias} regex matched no content, not storing result.")
