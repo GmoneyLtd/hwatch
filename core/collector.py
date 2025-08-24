@@ -17,6 +17,9 @@ from pysnmp.hlapi.asyncio import (
 )
 
 from core.config_loader import DeviceConfig, TaskConfig
+from core.connection_cache import get_connection_cache
+from core.error_handler import error_handler
+from core.performance_monitor import performance_monitor
 
 # SSH connection pool dictionary, key is (task_alias, device_name) tuple, value is connection object and last used time
 _ssh_connection_pools: dict[tuple[str, str], dict[str, Any]] = {}
@@ -43,22 +46,33 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
         conn_entry = _ssh_connection_pools[pool_key]
         conn = conn_entry["connection"]
 
-        # Check if connection is still valid
-        try:
+        # Check if connection is still valid using cache
+        connection_cache = get_connection_cache()
+
+        async def check_connection_func(connection):
             # More comprehensive connection status check
-            if conn._transport is not None and not conn._transport.at_eof() and not conn._transport.is_closing():
+            if (
+                connection._transport is not None
+                and not connection._transport.at_eof()
+                and not connection._transport.is_closing()
+            ):
                 # Try sending a simple command to verify connection
-                try:
-                    await asyncio.wait_for(conn.run("echo test", check=True), timeout=2)
-                    # Connection is valid, update last used time
-                    conn_entry["last_used"] = time.time()
-                    logger.debug(f"[SSH] Reusing existing connection: {task.alias} on {device.name}")
-                    return conn
-                except Exception as test_e:
-                    logger.debug(f"[SSH] Connection test failed: {task.alias} on {device.name} - {test_e}")
-                    raise Exception("Connection test failed") from None
+                await asyncio.wait_for(connection.run("echo test", check=True), timeout=2)
+                return True
+            return False
+
+        try:
+            is_valid = await connection_cache.is_valid_cached(
+                f"ssh_{pool_key[0]}_{pool_key[1]}", conn, check_connection_func
+            )
+
+            if is_valid:
+                # Connection is valid, update last used time
+                conn_entry["last_used"] = time.time()
+                logger.debug(f"[SSH] Reusing existing connection: {task.alias} on {device.name}")
+                return conn
             else:
-                raise Exception("Connection status check failed")
+                raise Exception("Connection validation failed")
         except Exception:
             # Connection is disconnected or unavailable, clean up connection pool entry
             try:
@@ -297,7 +311,7 @@ async def _run_ssh_task(
                     last_exception = e
                     # More precise connection-related error detection
                     is_connection_error = (
-                        isinstance(e, (asyncssh.ConnectionLost, asyncssh.DisconnectError))
+                        isinstance(e, asyncssh.ConnectionLost | asyncssh.DisconnectError)
                         or "connection" in str(e).lower()
                         or "transport" in str(e).lower()
                         or "network" in str(e).lower()

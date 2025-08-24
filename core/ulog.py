@@ -13,7 +13,16 @@ CONSOLE_FORMAT = (
 
 FILE_FORMAT = "{time} {level: <7} {name}:{function}:{line} {message}"
 
-# Core module list
+# Module groups for organized logging
+MODULE_GROUPS = {
+    "core": ["collector", "scheduler"],
+    "storage": ["batch_writer", "file_buffer", "database"],
+    "web": ["web_server", "monitoring_api"],
+    "system": ["config_loader", "watch", "error_handler", "ulog"],
+    "performance": ["performance_monitor", "string_optimizer", "connection_cache"],
+}
+
+# Legacy core modules list for backward compatibility
 CORE_MODULES = ["collector", "scheduler", "web_server", "database", "watch", "config_loader", "ulog"]
 
 
@@ -59,6 +68,7 @@ def setup_logging(
     rotation: str = "10 MB",
     retention: str = "7 days",
     log_dir: str = "log",
+    use_grouped_logs: bool = True,
     modules: list[str] | None = None,
 ):
     """Configure global logger.
@@ -68,7 +78,8 @@ def setup_logging(
         rotation: Log file rotation size threshold
         retention: Log file retention time
         log_dir: Log file storage directory
-        modules: List of modules to log separately, defaults to None means using CORE_MODULES
+        use_grouped_logs: Use grouped log files instead of individual module files
+        modules: List of modules to log separately (legacy), defaults to None means using CORE_MODULES
     """
     # Ensure log directory exists
     try:
@@ -103,37 +114,38 @@ def setup_logging(
         colorize=True,
     )
 
-    # General application log configuration
-    app_modules = ["ulog", "config_loader", "database"]
-    app_filter = create_module_filter(app_modules, include=True)
+    if use_grouped_logs:
+        # Use grouped log files for better organization
+        for group_name, group_modules in MODULE_GROUPS.items():
+            group_filter = create_module_filter(group_modules, include=True)
 
-    _ = logger.add(
-        f"{log_dir}/app.log",
-        level="DEBUG",
-        filter=app_filter,
-        rotation=rotation,
-        retention=retention,
-        enqueue=True,
-        backtrace=True,
-        diagnose=True,
-        format=FILE_FORMAT,
-    )
+            _ = logger.add(
+                f"{log_dir}/{group_name}.log",
+                level="DEBUG",
+                filter=group_filter,
+                rotation=rotation,
+                retention=retention,
+                enqueue=True,
+                backtrace=True,
+                diagnose=True,
+                format=FILE_FORMAT,
+            )
+    else:
+        # Legacy: separate log files by individual module
+        modules_to_log = modules or CORE_MODULES
 
-    # Separate log files by module
-    modules_to_log = modules or CORE_MODULES
+        for module_name in modules_to_log:
+            module_filter = create_module_filter([module_name], include=True)
 
-    for module_name in modules_to_log:
-        module_filter = create_module_filter([module_name], include=True)
-
-        _ = logger.add(
-            f"{log_dir}/{module_name}.log",
-            level="DEBUG",
-            filter=module_filter,
-            rotation=rotation,
-            retention=retention,
-            enqueue=True,
-            format=FILE_FORMAT,
-        )
+            _ = logger.add(
+                f"{log_dir}/{module_name}.log",
+                level="DEBUG",
+                filter=module_filter,
+                rotation=rotation,
+                retention=retention,
+                enqueue=True,
+                format=FILE_FORMAT,
+            )
 
     logger.info(f"Log system initialized, console level: {level.upper()}, log directory: {log_dir}")
 

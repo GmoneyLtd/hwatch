@@ -41,10 +41,9 @@ devices:
       username: admin
   ip: 192.168.2.11
   name: AP-205
-
 tasks:
 - alias: run_show_command
-  enabled: true
+  enabled: false
   labels:
   - BIOS_Version
   - Branch_Point
@@ -65,7 +64,6 @@ tasks:
   storage: file
   targets:
   - Fortinet_60
-
 - alias: get_router_a_version
   enabled: false
   protocol: ssh
@@ -77,7 +75,6 @@ tasks:
   storage: sqlite
   targets:
   - Router_A
-
 - alias: clear_router_a_counters
   enabled: false
   protocol: ssh
@@ -89,7 +86,6 @@ tasks:
   storage: null
   targets:
   - Router_A
-
 - alias: check_router_a_datapath
   enabled: false
   labels:
@@ -107,7 +103,6 @@ tasks:
   storage: sqlite
   targets:
   - Router_A
-
 - alias: fgProcessorUsage_per
   enabled: true
   labels:
@@ -125,7 +120,6 @@ tasks:
   storage: sqlite
   targets:
   - Fortinet_60
-
 - alias: mixed_snmp_monitoring
   enabled: false
   labels:
@@ -149,7 +143,6 @@ tasks:
   storage: sqlite
   targets:
   - Fortinet_60
-
 - alias: system_info_collection
   enabled: true
   labels:
@@ -174,7 +167,6 @@ tasks:
   targets:
   - Fortinet_60
   - AP-205
-
 - alias: comprehensive_device_monitoring
   enabled: false
   labels:

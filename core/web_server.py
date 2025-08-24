@@ -14,6 +14,7 @@ from loguru import logger
 # Import project modules
 from core.config_loader import AppConfig, load_config
 from core.database import get_available_devices, get_available_tasks, get_chart_data
+from core.monitoring_api import monitoring_router
 
 
 def _generate_chart_color(index: int) -> str:
@@ -61,6 +62,9 @@ def _get_background_color(border_color: str) -> str:
 # --- Global variables and application instance ---
 
 app = FastAPI(title="Hwatch Play")
+
+# Include monitoring API routes
+app.include_router(monitoring_router)
 
 
 # Add access log middleware

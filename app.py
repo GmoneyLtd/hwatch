@@ -7,9 +7,14 @@ import sys
 import uvicorn
 from loguru import logger
 
+from core.batch_writer import batch_writer
 from core.collector import cleanup_all_connections
 from core.config_loader import AppConfig, load_config
 from core.database import close_db, init_db
+from core.file_buffer import get_file_buffer
+
+# Import optimization modules
+from core.performance_monitor import performance_monitor
 from core.scheduler import TaskScheduler
 
 # Import core modules
@@ -49,7 +54,15 @@ async def graceful_shutdown():
         logger.info("Cleaning up connections...")
         await cleanup_all_connections()
 
-        # 5. Close database connection
+        # 5. Shutdown optimization components
+        logger.info("Shutting down optimization components...")
+        from core.batch_writer import shutdown_batch_writer
+        from core.file_buffer import shutdown_file_buffer
+
+        await shutdown_batch_writer()
+        await shutdown_file_buffer()
+
+        # 6. Close database connection
         logger.info("Closing database connection...")
         await close_db()
 
