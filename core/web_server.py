@@ -13,7 +13,7 @@ from loguru import logger
 
 # Import project modules
 from core.config_loader import AppConfig, load_config
-from core.database import get_available_devices, get_available_tasks, get_chart_data
+from core.database import get_available_devices, get_available_labels, get_available_tasks, get_chart_data
 from core.monitoring_api import monitoring_router
 
 
@@ -444,6 +444,7 @@ async def get_chart_data_api(
     start: str | None = None,
     end: str | None = None,
     devices: str | None = None,
+    label: str | None = None,
     user: dict = current_user_dependency,
 ):
     if not user:
@@ -466,27 +467,140 @@ async def get_chart_data_api(
     # Get task list - based on tasks that actually have data in specified time range
     tasks = await get_available_tasks(start_date, end_date)
 
-    # Device list logic:
-    # 1. If no task is selected, device list is empty
-    # 2. If task is selected, get device list for that task in specified time range
-    if task_alias:
-        available_devices = await get_available_devices(start_date, end_date, task_alias)
-    else:
-        available_devices = []
-
     # Parse selected devices
     selected_devices = devices.split(",") if devices else []
 
-    # Build basic response data
+    # Situation 1: Only task selected, return labels and devices
+    if task_alias and not label:
+        available_labels = await get_available_labels(task_alias, start_date, end_date)
+        available_devices = await get_available_devices(start_date, end_date, task_alias)
+
+        return {
+            "labels": available_labels,
+            "tasks": tasks,  # 返回完整的tasks列表
+            "available_devices": available_devices,
+            "selected_devices": selected_devices,
+            "datasets": [],
+        }
+
+    # Situation 2: Task and label selected, but no devices, return device list
+    if task_alias and label and not selected_devices:
+        available_devices = await get_available_devices(start_date, end_date, task_alias)
+        available_labels = await get_available_labels(task_alias, start_date, end_date)
+
+        return {
+            "labels": available_labels,  # 返回完整的labels列表
+            "tasks": tasks,  # 返回完整的tasks列表
+            "available_devices": available_devices,
+            "selected_devices": [],
+            "datasets": [],
+        }
+
+    # Build basic response data for backward compatibility
+    if task_alias:
+        available_devices = await get_available_devices(start_date, end_date, task_alias)
+        available_labels = await get_available_labels(task_alias, start_date, end_date)
+    else:
+        available_devices = []
+        available_labels = []
+
     response_data = {
         "tasks": tasks,
+        "labels": available_labels,
         "available_devices": available_devices,
         "selected_devices": selected_devices,
         "datasets": [],
     }
 
-    # Only query chart data when task, devices and time are selected
-    if task_alias and selected_devices and start and end:
+    # Situation 3: Complete selection (task, label, devices), return chart data
+    if task_alias and label and selected_devices and start and end:
+        # Get raw data
+        raw_data = await get_chart_data(task_alias, start_date, end_date)
+
+        # Filter data: only keep data matching the selected label
+        filtered_data = []
+        for item in raw_data:
+            key = item["key"]
+            # Check if key matches the selected label
+            if key == label or (key.startswith(label + ".") and key.split(".")[-1].isdigit()):
+                if item["device_name"] in selected_devices:
+                    filtered_data.append(item)
+
+        # Process filtered data using existing logic
+        datasets = []
+        if filtered_data:
+            # Group data by device and key combination
+            series_data = {}
+            for row in filtered_data:
+                device = row["device_name"]
+                key = row["key"]
+
+                # Create unique series identifier: device_key
+                series_key = f"{device}_{key}"
+
+                if series_key not in series_data:
+                    series_data[series_key] = {"device": device, "key": key, "data": []}
+
+                # Parse numeric value, handle various possible data formats
+                value = row["value"]
+                numeric_value = 0.0
+
+                if value is not None:
+                    try:
+                        # Try direct conversion to float
+                        numeric_value = float(value)
+                    except (ValueError, TypeError):
+                        # If conversion fails, try cleaning string then converting
+                        try:
+                            cleaned_value = str(value).strip().replace(",", "")
+                            if cleaned_value and cleaned_value.replace(".", "").replace("-", "").isdigit():
+                                numeric_value = float(cleaned_value)
+                        except (ValueError, TypeError):
+                            numeric_value = 0.0
+
+                # Convert timestamp to seconds precision by removing microseconds
+                timestamp = row["timestamp"]
+                if isinstance(timestamp, str):
+                    # Parse datetime string and truncate to seconds
+                    try:
+                        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        timestamp_seconds = dt.replace(microsecond=0).isoformat()
+                    except ValueError:
+                        timestamp_seconds = timestamp
+                else:
+                    # If it's already a datetime object, truncate microseconds
+                    timestamp_seconds = timestamp.replace(microsecond=0).isoformat()
+
+                series_data[series_key]["data"].append({"x": timestamp_seconds, "y": numeric_value})
+
+            # Create dataset for each device-key combination
+            sorted_series = sorted(series_data.items(), key=lambda x: (x[1]["device"], x[1]["key"]))
+
+            for color_index, (_, series_info) in enumerate(sorted_series):
+                # Generate label
+                chart_label = f"{series_info['device']} - {series_info['key']}"
+
+                # Generate color
+                border_color = _generate_chart_color(color_index)
+                background_color = _get_background_color(border_color)
+
+                datasets.append({
+                    "label": chart_label,
+                    "data": series_info["data"],
+                    "borderColor": border_color,
+                    "backgroundColor": background_color,
+                    "fill": False,
+                    "tension": 0.1,
+                })
+
+        response_data["datasets"] = datasets
+        # 确保返回完整的labels列表, 而不是只返回当前选中的label
+        available_labels = await get_available_labels(task_alias, start_date, end_date)
+        response_data["labels"] = available_labels
+        return response_data
+
+    # Original logic for backward compatibility: Only query chart data when task, devices and time are selected
+    if task_alias and selected_devices and start and end and not label:
         # Get raw data
         raw_data = await get_chart_data(task_alias, start_date, end_date)
 

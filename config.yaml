@@ -43,7 +43,7 @@ devices:
   name: AP-205
 tasks:
 - alias: run_show_command
-  enabled: false
+  enabled: true
   labels:
   - BIOS_Version
   - Branch_Point
@@ -51,7 +51,7 @@ tasks:
   schedule:
     frequency: 20
     mode: delay
-    seconds: 30
+    seconds: 15
   ssh:
     command:
     - get system status
@@ -61,7 +61,7 @@ tasks:
       - /1000000
       - '*10'
       regex: (?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)
-  storage: file
+  storage: sqlite
   targets:
   - Fortinet_60
 - alias: get_router_a_version

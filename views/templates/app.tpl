@@ -108,6 +108,18 @@
                             <input type="hidden" id="chart-task" name="task_alias" value="">
                         </div>
                         <div class="filter-group">
+                            <label for="labelDropdown">Label</label>
+                            <div class="dropdown" id="labelDropdown">
+                                <button type="button" class="dropdown-toggle" id="labelDropdownToggle">
+                                    Select a label
+                                </button>
+                                <div class="dropdown-menu" id="labelDropdownMenu">
+                                    <!-- Label options will be loaded here -->
+                                </div>
+                            </div>
+                            <input type="hidden" id="chart-label" name="label" value="">
+                        </div>
+                        <div class="filter-group">
                             <label for="deviceDropdown">Devices</label>
                             <div class="dropdown" id="deviceDropdown">
                                 <button type="button" class="dropdown-toggle" id="dropdownToggle">

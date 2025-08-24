@@ -206,6 +206,33 @@ async def cleanup_old_data(days: int = 90):
         return False
 
 
+async def get_available_labels(task_alias: str, start_date: datetime, end_date: datetime) -> list[str]:
+    """Get available base labels for a specific task, handling snmpwalk suffixes"""
+    try:
+        conn = await _get_connection()
+        async with conn.execute(
+            "SELECT DISTINCT key FROM task_results WHERE task_alias = ? AND timestamp BETWEEN ? AND ? ORDER BY key",
+            (task_alias, start_date, end_date),
+        ) as cursor:
+            rows = await cursor.fetchall()
+
+        # Extract base label names, removing snmpwalk suffixes
+        base_labels = set()
+        for row in rows:
+            key = row[0]
+            # Handle snmpwalk suffixes (e.g., fgProcessorUsage.1 -> fgProcessorUsage)
+            if "." in key and key.split(".")[-1].isdigit():
+                base_label = ".".join(key.split(".")[:-1])
+                base_labels.add(base_label)
+            else:
+                base_labels.add(key)
+
+        return sorted(list(base_labels))
+    except Exception as e:
+        logger.error(f"Failed to query available labels for task {task_alias}: {e}")
+        return []
+
+
 async def get_database_stats():
     """Get database statistics for monitoring"""
     try:

@@ -89,17 +89,29 @@ document.addEventListener('DOMContentLoaded', function () {
                     taskDropdownToggle.textContent = selectedTask;
                     taskDropdownMenu.classList.remove('show');
 
-                    // Clear device selection
-                    const dropdownMenu = document.getElementById('dropdownMenu');
-                    if (dropdownMenu) {
-                        const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
-                        checkboxes.forEach(cb => {
-                            cb.checked = false;
-                        });
-                        updateDeviceCount();
-                    }
+                    // Clear label and device selection
+                    document.getElementById('chart-label').value = '';
+                    document.getElementById('labelDropdownToggle').textContent = 'Select a label';
+                    clearDeviceSelection();
 
-                    loadChartData();
+                    loadChartData(); // Load labels
+                }
+            });
+        }
+
+        // Label选择改变时触发数据加载
+        const labelDropdownMenu = document.getElementById('labelDropdownMenu');
+        if (labelDropdownMenu) {
+            labelDropdownMenu.addEventListener('change', (event) => {
+                if (event.target.name === 'label') {
+                    const selectedLabel = event.target.value;
+                    document.getElementById('chart-label').value = selectedLabel;
+                    document.getElementById('labelDropdownToggle').textContent = selectedLabel;
+                    labelDropdownMenu.classList.remove('show');
+
+                    // Clear device selection
+                    clearDeviceSelection();
+                    loadChartData(); // Load device list
                 }
             });
         }
@@ -117,12 +129,23 @@ document.addEventListener('DOMContentLoaded', function () {
             dropdownMenu.addEventListener('change', (event) => {
                 if (event.target.name === 'devices') {
                     updateDeviceCount();
-                    loadChartData();
+                    loadChartData(); // Load chart data
                 }
             });
             dropdownMenu.addEventListener('click', (event) => {
                 event.stopPropagation(); // Prevent dropdown from closing when clicking on checkbox/label
             });
+        }
+    }
+
+    function clearDeviceSelection() {
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        if (dropdownMenu) {
+            const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            updateDeviceCount();
         }
     }
 
@@ -137,17 +160,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function clearTaskAndDeviceSelection() {
         // 清空任务选择
         document.getElementById('chart-task').value = '';
-        taskDropdownToggle.textContent = 'Select Task';
+        taskDropdownToggle.textContent = 'Select a task';
+
+        // 清空label选择
+        document.getElementById('chart-label').value = '';
+        document.getElementById('labelDropdownToggle').textContent = 'Select a label';
 
         // 清空设备选择
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        if (dropdownMenu) {
-            const checkboxes = dropdownMenu.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            updateDeviceCount();
-        }
+        clearDeviceSelection();
     }
 
     // --- Data Loading ---
@@ -216,6 +236,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (key !== 'devices') {
                 urlParams.append(key, value);
             }
+        }
+
+        // 添加label参数
+        const selectedLabel = document.getElementById('chart-label').value;
+        if (selectedLabel) {
+            urlParams.append('label', selectedLabel);
         }
 
         // 添加devices参数（使用列表方式）
@@ -608,10 +634,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateChartFilterOptions(data) {
         const selectedTask = document.getElementById('chart-task').value;
+        const selectedLabel = document.getElementById('chart-label').value;
 
-        // 更新任务选项
+        // 更新任务选项 - 始终显示完整的任务列表
         taskDropdownMenu.innerHTML = '';
-        taskDropdownToggle.textContent = 'Select a task'; // Reset the button text
+        if (!selectedTask) {
+            taskDropdownToggle.textContent = 'Select a task';
+        }
         if (data.tasks && data.tasks.length > 0) {
             data.tasks.forEach(task => {
                 const isChecked = (task === selectedTask);
@@ -623,14 +652,34 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // 更新设备选项
+        // 更新Label选项 - 只有当选择了task时才显示labels
+        const labelDropdownMenu = document.getElementById('labelDropdownMenu');
+        const labelDropdownToggle = document.getElementById('labelDropdownToggle');
+
+        labelDropdownMenu.innerHTML = '';
+        if (!selectedLabel) {
+            labelDropdownToggle.textContent = 'Select a label';
+        }
+
+        if (selectedTask && data.labels && data.labels.length > 0) {
+            data.labels.forEach(label => {
+                const isChecked = (label === selectedLabel);
+                const item = createDropdownItem('radio', 'label', label, `label-${label}`, label, isChecked);
+                if (isChecked) {
+                    labelDropdownToggle.textContent = label;
+                }
+                labelDropdownMenu.appendChild(item);
+            });
+        }
+
+        // 更新设备选项 - 只有当选择了task时才显示设备
         const dropdownMenu = document.getElementById('dropdownMenu');
         const deviceDropdown = document.getElementById('deviceDropdown');
         const deviceCountSpan = document.getElementById('deviceCount');
 
         // 始终显示设备下拉菜单（根据是否有可用设备决定内容）
         deviceDropdown.style.display = 'block';
-        if (data.available_devices && data.available_devices.length > 0) {
+        if (selectedTask && data.available_devices && data.available_devices.length > 0) {
             // 保存当前选中的设备
             const currentlyCheckedDevices = new Set();
             if (dropdownMenu) {
@@ -827,6 +876,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     setupDropdown('taskDropdown', 'taskDropdownToggle', 'taskDropdownMenu');
+    setupDropdown('labelDropdown', 'labelDropdownToggle', 'labelDropdownMenu');
     setupDropdown('deviceDropdown', 'dropdownToggle', 'dropdownMenu');
 
     document.addEventListener('click', (event) => {
