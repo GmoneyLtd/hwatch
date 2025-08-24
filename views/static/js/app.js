@@ -53,10 +53,11 @@ document.addEventListener('DOMContentLoaded', function () {
         loadOutfileList();
     }
 
-    // 设置默认时间范围为最近2小时（基于当前时区）
+    // 设置默认时间范围为当前时间前2小时到后1小时（基于当前时区）
     function setDefaultTimeRange() {
         const now = new Date();
         const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+        const oneHourLater = new Date(now.getTime() + 1 * 60 * 60 * 1000);
 
         const startInput = document.getElementById('chart-start');
         const endInput = document.getElementById('chart-end');
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             startInput.value = formatLocalDateTime(twoHoursAgo);
-            endInput.value = formatLocalDateTime(now);
+            endInput.value = formatLocalDateTime(oneHourLater);
         }
     }
 
@@ -434,6 +435,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 toolbox: {
                     feature: {
+                        myRefresh: {
+                            show: true,
+                            title: 'Refresh Data',
+                            icon: 'path://M12,6V9L16,5L12,1V4A8,8 0 0,0 4,12C4,13.57 4.46,15.03 5.24,16.26L6.7,14.8C6.25,13.97 6,13 6,12A6,6 0 0,1 12,6M18.76,7.74L17.3,9.2C17.74,10.04 18,11 18,12A6,6 0 0,1 12,18V15L8,19L12,23V20A8,8 0 0,0 20,12C20,10.43 19.54,8.97 18.76,7.74Z',
+                            onclick: function () {
+                                loadChartData();
+                            }
+                        },
                         saveAsImage: {
                             title: 'Save as Image',
                             name: 'chart_data',
@@ -583,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     name: dataset.label,
                     type: 'line',
                     data: dataset.data.map(item => [item.x, item.y]),
-                    showSymbol: true,
+                    showSymbol: false,
                     symbolSize: 5,
                     emphasis: {
                         focus: 'series',
