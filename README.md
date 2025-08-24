@@ -1000,6 +1000,243 @@ System automatically manages SSH connection pool for improved performance:
 - **Auto Cleanup**: Connections unused for more than 10 minutes are automatically cleaned
 - **Health Check**: Connection status is checked before use
 - **Concurrency Control**: Maximum 5 concurrent connections per device
+- **Connection Isolation**: Connection pool management based on (task_alias, device_name) keys
+
+#### SSH Multi-Command Execution Flow
+
+```mermaid
+graph TB
+    A[Start SSH Task] --> B[Validate Configuration]
+    B --> C[Parse Command List]
+    C --> D[Initialize Result Container]
+    D --> E[Loop Execute Commands]
+    
+    E --> F{Check Connection Status}
+    F -->|Invalid Connection| G[Establish New Connection]
+    F -->|Valid Connection| H[Reuse Existing Connection]
+    
+    G --> I[Execute Command]
+    H --> I
+    
+    I --> J{Execution Result}
+    J -->|Success| K[Record Success Result]
+    J -->|Failure| L{Need Retry?}
+    
+    L -->|Yes| M[Wait Exponential Backoff Time]
+    M --> N{Check Retry Count}
+    N -->|Not Exceeded| O[Mark Connection Invalid]
+    O --> F
+    N -->|Exceeded| P[Record Failure Result]
+    
+    L -->|No| P
+    K --> Q{More Commands?}
+    P --> Q
+    
+    Q -->|Yes| E
+    Q -->|No| R[Merge All Results]
+    R --> S[Parse Output]
+    S --> T[Return Final Result]
+    
+    style A fill:#e1f5fe
+    style T fill:#c8e6c9
+    style P fill:#ffcdd2
+    style K fill:#dcedc8
+```
+
+#### SSH Command-Level Fault Tolerance
+
+```mermaid
+graph LR
+    A[Command 1] --> B{Execution Result}
+    B -->|Success| C[Record Result 1]
+    B -->|Failure| D[Record Error 1]
+    
+    C --> E[Command 2]
+    D --> E
+    
+    E --> F{Execution Result}
+    F -->|Success| G[Record Result 2]
+    F -->|Failure| H[Record Error 2]
+    
+    G --> I[Command 3]
+    H --> I
+    
+    I --> J{Execution Result}
+    J -->|Success| K[Record Result 3]
+    J -->|Failure| L[Record Error 3]
+    
+    K --> M[Merge All Results]
+    L --> M
+    
+    M --> N[Output Format Example]
+    
+    N --> O["Command 1: show version\nVersion: 5.6.8\n\nCommand 2: show status\nERROR: Timeout\n\nCommand 3: show memory\nMemory: 45%"]
+    
+    style A fill:#e3f2fd
+    style E fill:#e3f2fd
+    style I fill:#e3f2fd
+    style C fill:#e8f5e8
+    style G fill:#e8f5e8
+    style K fill:#e8f5e8
+    style D fill:#ffebee
+    style H fill:#ffebee
+    style L fill:#ffebee
+    style O fill:#f3e5f5
+```
+
+#### Multi-Command Output Result Parsing
+
+The system supports intelligent parsing of multi-command execution results:
+
+**Output Format Structure**:
+```
+Command 1: <command1>
+<command1 output result>
+
+Command 2: <command2>
+<command2 output result>
+
+Command 3: <command3>
+<command3 output result>
+```
+
+**Parsing Strategies**:
+1. **No Regex**: Direct command segment matching with labels
+2. **With Regex**: Apply regex matching to entire output
+3. **Mathematical Operations**: Support mathematical calculations on parsed results
+4. **Label Mapping**: Each label corresponds to one parsed result
+
+**Example Configuration**:
+```yaml
+ssh:
+  command:
+  - "show version | grep Version"
+  - "show memory | grep Usage"
+  - "show cpu | grep Load"
+  parse:
+    regex: "Version:\\s*([\\d.]+).*Usage:\\s*([\\d]+)%.*Load:\\s*([\\d.]+)"
+    calculate:
+    - ""          # Version number no calculation
+    - "/100"       # Memory usage convert to decimal
+    - "*100"       # CPU load amplify 100 times
+labels:
+- "SystemVersion"
+- "MemoryUsage"
+- "CPULoad"
+```
+
+#### SSH Command Failure Handling Mechanism
+
+**Command Failure Classification and Handling Strategy**:
+
+##### 🔌 **Failure Scenarios That Mark Connection Invalid**
+
+The system will mark connections as invalid and remove them from the connection pool when detecting the following error types:
+
+```python
+# Connection error detection logic
+is_connection_error = (
+    isinstance(e, (asyncssh.ConnectionLost, asyncssh.DisconnectError)) or
+    "connection" in str(e).lower() or "transport" in str(e).lower() or
+    "network" in str(e).lower() or "broken pipe" in str(e).lower()
+)
+```
+
+**Specific Scenarios**:
+- **Network Connection Interruption**: `ConnectionLost`, `Network is unreachable`
+- **SSH Session Termination**: `Session terminated`, `Connection aborted`
+- **Transport Layer Errors**: `TransportError`, `Transport closed`
+- **Authentication Failure**: `Authentication failed` (during reconnection)
+- **Broken Pipe**: `Broken pipe`, `Connection reset`
+
+**Handling Strategy**:
+- ✅ Set local variable `conn = None`
+- ✅ Immediately remove invalid connection from pool
+- ✅ Automatically re-establish connection when next command executes
+
+##### ✅ **Failure Scenarios That Keep Connection Valid**
+
+The following types of failures will keep the connection valid, allowing subsequent commands to continue using it:
+
+**A. Command Execution Errors (Non-zero Exit Codes)**
+```bash
+# Examples: Command fails but connection remains healthy
+$ show version-invalid        # Command doesn't exist, exit code 127
+$ ls /nonexistent/path        # Path doesn't exist, exit code 2
+$ cat /etc/shadow             # Permission denied, exit code 1
+```
+
+**B. Command Execution Timeout**
+- Command doesn't complete within specified time
+- Connection itself may still be valid
+- Allows subsequent commands to continue using the connection
+
+**C. Device-Specific Business Logic Errors**
+```bash
+# Device configuration or support issues
+$ configure                   # Failed to enter configuration mode
+$ show interfaces xyz         # Interface doesn't exist
+$ get system status          # Device doesn't support this command
+```
+
+**Handling Strategy**:
+- ✅ Keep local variable `conn` unchanged
+- ✅ Connection pool entry remains unchanged
+- ✅ Log error information but continue using current connection
+- ✅ Subsequent commands can directly reuse existing connection
+
+##### 📊 **Connection Recovery Flow**
+
+```mermaid
+graph TB
+    A[Command Execution Exception] --> B{Exception Type Detection}
+    
+    B -->|Connection-Related Error| C[Mark Connection Invalid]
+    B -->|Command-Related Error| D[Keep Connection Valid]
+    
+    C --> E[conn = None]
+    C --> F[Remove Connection from Pool]
+    C --> G[Log Connection Error]
+    
+    D --> H[conn Remains Unchanged]
+    D --> I[Connection Pool Unchanged]
+    D --> J[Log Command Error]
+    
+    E --> K[Next Command Execution]
+    G --> K
+    H --> K
+    J --> K
+    
+    K --> L{Check Connection Status}
+    
+    L -->|conn is None| M[Call _get_ssh_connection]
+    L -->|conn is Valid| N[Use Existing Connection Directly]
+    
+    M --> O[Health Check Connection Pool]
+    O --> P{Is Pool Connection Valid?}
+    
+    P -->|Invalid| Q[Delete and Rebuild Connection]
+    P -->|Valid| R[Reuse Pool Connection]
+    
+    Q --> S[Create New Connection and Add to Pool]
+    R --> T[Update Last Used Time]
+    
+    S --> U[Execute Command]
+    T --> U
+    N --> U
+    
+    style C fill:#ffcdd2
+    style D fill:#c8e6c9
+    style M fill:#e1f5fe
+    style Q fill:#fff3e0
+```
+
+**Key Advantages**:
+- **Intelligent Detection**: Precisely determine whether connection rebuild is needed based on error type
+- **Efficient Reuse**: Command errors won't unnecessarily disconnect valid connections
+- **Fast Recovery**: Connection issues can be detected and fixed promptly
+- **Resource Conservation**: Avoid unnecessary connection rebuild overhead
+- **Fault Tolerance**: Single command failure doesn't affect overall task execution
 
 ### Error Handling Mechanism
 - **Auto Retry**: Retry according to configuration when connection fails

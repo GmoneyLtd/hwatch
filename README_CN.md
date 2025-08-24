@@ -1066,6 +1066,243 @@ export LOG_LEVEL=INFO
 - **自动清理**: 超过10分钟未使用的连接会被自动清理
 - **健康检查**: 使用前会检查连接状态
 - **并发控制**: 每个设备最多维护5个并发连接
+- **连接隔离**: 基于(task_alias, device_name)键进行连接池管理
+
+#### SSH多命令执行流程
+
+```mermaid
+graph TB
+    A[开始SSH任务] --> B[验证配置]
+    B --> C[解析命令列表]
+    C --> D[初始化结果容器]
+    D --> E[循环执行命令]
+    
+    E --> F{检查连接状态}
+    F -->|连接无效| G[建立新连接]
+    F -->|连接有效| H[复用现有连接]
+    
+    G --> I[执行命令]
+    H --> I
+    
+    I --> J{执行结果}
+    J -->|成功| K[记录成功结果]
+    J -->|失败| L{是否需要重试}
+    
+    L -->|是| M[等待指数退避时间]
+    M --> N{重试次数检查}
+    N -->|未超限| O[标记连接无效]
+    O --> F
+    N -->|已超限| P[记录失败结果]
+    
+    L -->|否| P
+    K --> Q{是否还有更多命令}
+    P --> Q
+    
+    Q -->|是| E
+    Q -->|否| R[合并所有结果]
+    R --> S[解析输出]
+    S --> T[返回最终结果]
+    
+    style A fill:#e1f5fe
+    style T fill:#c8e6c9
+    style P fill:#ffcdd2
+    style K fill:#dcedc8
+```
+
+#### SSH命令级别容错机制
+
+```mermaid
+graph LR
+    A[命令1] --> B{执行结果}
+    B -->|成功| C[记录结果1]
+    B -->|失败| D[记录错误1]
+    
+    C --> E[命令2]
+    D --> E
+    
+    E --> F{执行结果}
+    F -->|成功| G[记录结果2]
+    F -->|失败| H[记录错误2]
+    
+    G --> I[命令3]
+    H --> I
+    
+    I --> J{执行结果}
+    J -->|成功| K[记录结果3]
+    J -->|失败| L[记录错误3]
+    
+    K --> M[合并所有结果]
+    L --> M
+    
+    M --> N[输出格式示例]
+    
+    N --> O["Command 1: show version\nVersion: 5.6.8\n\nCommand 2: show status\nERROR: Timeout\n\nCommand 3: show memory\nMemory: 45%"]
+    
+    style A fill:#e3f2fd
+    style E fill:#e3f2fd
+    style I fill:#e3f2fd
+    style C fill:#e8f5e8
+    style G fill:#e8f5e8
+    style K fill:#e8f5e8
+    style D fill:#ffebee
+    style H fill:#ffebee
+    style L fill:#ffebee
+    style O fill:#f3e5f5
+```
+
+#### 多命令输出结果解析
+
+系统支持对多命令执行结果进行智能解析：
+
+**输出格式结构**:
+```
+Command 1: <命令1>
+<命令1的输出结果>
+
+Command 2: <命令2>
+<命令2的输出结果>
+
+Command 3: <命令3>
+<命令3的输出结果>
+```
+
+**解析策略**:
+1. **无正则表达式**: 直接按命令分段匹配标签
+2. **有正则表达式**: 对整个输出进行正则匹配
+3. **数学运算**: 支持对解析结果进行数学计算
+4. **标签映射**: 每个标签对应一个解析结果
+
+**示例配置**:
+```yaml
+ssh:
+  command:
+  - "show version | grep Version"
+  - "show memory | grep Usage"
+  - "show cpu | grep Load"
+  parse:
+    regex: "Version:\\s*([\\d.]+).*Usage:\\s*([\\d]+)%.*Load:\\s*([\\d.]+)"
+    calculate:
+    - ""          # 版本号不计算
+    - "/100"       # 内存使用率转换为小数
+    - "*100"       # CPU负载放大100倍
+labels:
+- "SystemVersion"
+- "MemoryUsage"
+- "CPULoad"
+```
+
+#### SSH命令失败处理机制
+
+**命令失败分类和处理策略**：
+
+##### 🔌 **会标记连接无效的失败场景**
+
+系统会在检测到以下类型的错误时标记连接无效并从连接池中删除：
+
+```python
+# 连接错误判断逻辑
+is_connection_error = (
+    isinstance(e, (asyncssh.ConnectionLost, asyncssh.DisconnectError)) or
+    "connection" in str(e).lower() or "transport" in str(e).lower() or
+    "network" in str(e).lower() or "broken pipe" in str(e).lower()
+)
+```
+
+**具体场景**：
+- **网络连接中断**：`ConnectionLost`, `Network is unreachable`
+- **SSH会话终止**：`Session terminated`, `Connection aborted`
+- **传输层错误**：`TransportError`, `Transport closed`
+- **认证失效**：`Authentication failed` (重新连接时)
+- **管道破裂**：`Broken pipe`, `Connection reset`
+
+**处理策略**：
+- ✅ 设置局部变量 `conn = None`
+- ✅ 立即从连接池删除无效连接
+- ✅ 下个命令执行时自动重新建立连接
+
+##### ✅ **不会标记连接无效的失败场景**
+
+以下类型的失败会保持连接有效，允许后续命令继续使用：
+
+**A. 命令执行错误（非零退出码）**
+```bash
+# 示例：命令失败但连接正常
+$ show version-invalid        # 命令不存在，退出码127
+$ ls /nonexistent/path        # 路径不存在，退出码2
+$ cat /etc/shadow             # 权限不足，退出码1
+```
+
+**B. 命令执行超时**
+- 命令在指定时间内未完成执行
+- 连接本身可能仍然有效
+- 允许后续命令继续使用连接
+
+**C. 设备特定的业务逻辑错误**
+```bash
+# 设备不支持或配置问题
+$ configure                   # 进入配置模式失败
+$ show interfaces xyz         # 接口不存在
+$ get system status          # 设备不支持此命令
+```
+
+**处理策略**：
+- ✅ 保持局部变量 `conn` 不变
+- ✅ 连接池中的连接保持不变
+- ✅ 记录错误信息但继续使用当前连接
+- ✅ 后续命令可以直接复用现有连接
+
+##### 📊 **连接恢复流程**
+
+```mermaid
+graph TB
+    A[命令执行异常] --> B{异常类型判断}
+    
+    B -->|连接相关错误| C[标记连接无效]
+    B -->|命令相关错误| D[保持连接有效]
+    
+    C --> E[conn = None]
+    C --> F[从连接池删除连接]
+    C --> G[记录连接错误日志]
+    
+    D --> H[conn保持不变]
+    D --> I[连接池保持不变]
+    D --> J[记录命令错误日志]
+    
+    E --> K[下个命令执行]
+    G --> K
+    H --> K
+    J --> K
+    
+    K --> L{检查连接状态}
+    
+    L -->|conn为None| M[调用_get_ssh_connection]
+    L -->|conn有效| N[直接使用现有连接]
+    
+    M --> O[健康检查连接池]
+    O --> P{连接池中的连接是否有效}
+    
+    P -->|无效| Q[删除并重建连接]
+    P -->|有效| R[复用连接池连接]
+    
+    Q --> S[建立新连接并加入池]
+    R --> T[更新最后使用时间]
+    
+    S --> U[执行命令]
+    T --> U
+    N --> U
+    
+    style C fill:#ffcdd2
+    style D fill:#c8e6c9
+    style M fill:#e1f5fe
+    style Q fill:#fff3e0
+```
+
+**关键优势**：
+- **智能判断**：根据错误类型精确判断是否需要重建连接
+- **高效复用**：命令错误不会无故断开有效连接
+- **快速恢复**：连接问题能够被及时检测和修复
+- **资源节约**：避免不必要的连接重建开销
+- **容错能力**：单个命令失败不影响整个任务执行
 
 ### 错误处理机制
 - **自动重试**: 连接失败时按配置进行重试

@@ -51,7 +51,7 @@ tasks:
   schedule:
     frequency: 20
     mode: delay
-    seconds: 120
+    seconds: 30
   ssh:
     command:
     - get system status

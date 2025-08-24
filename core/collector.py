@@ -38,12 +38,7 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
         # Check if connection is still valid
         try:
             # More comprehensive connection status check
-            if (
-                conn._transport is not None
-                and not conn._transport.at_eof()
-                and not conn.is_closing()
-                and not conn._transport.is_closing()
-            ):
+            if conn._transport is not None and not conn._transport.at_eof() and not conn._transport.is_closing():
                 # Try sending a simple command to verify connection
                 try:
                     await asyncio.wait_for(conn.run("echo test", check=True), timeout=2)
@@ -204,10 +199,17 @@ def _cleanup_snmp_engines():
             del _snmp_engine_pools[pool_key]
 
 
-async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
-    """Execute single SSH collection task, supporting sequential execution of multiple commands."""
-    conn_details = device.connection.ssh
+async def _run_ssh_task(
+    task: TaskConfig, device: DeviceConfig, command_timeout: int = 300, command_retry: int = 0
+) -> str:
+    """Execute single SSH collection task, supporting sequential execution of multiple commands.
 
+    Args:
+        task: Task configuration
+        device: Device configuration
+        command_timeout: Command execution timeout in seconds (default: 300 = 5 minutes)
+        command_retry: Command retry count (default: 0 = no retry)
+    """
     if not task.ssh:
         logger.error(f"[SSH] Task {task.alias} missing SSH configuration")
         return "ERROR: Missing SSH configuration"
@@ -220,15 +222,14 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
         return "ERROR: No valid commands"
 
     logger.info(
-        f"[SSH] Starting task execution {task.alias} on {device.name} ({device.ip}) - Command count: {len(commands)}"
+        f"[SSH] Starting task execution {task.alias} on {device.name} ({device.ip}) - Command count: {len(commands)}, timeout: {command_timeout}s, retry: {command_retry}"
     )
 
     try:
-        # Get SSH connection (from pool or create new)
-        conn = await _get_ssh_connection(task, device)
-
         # Store all command execution results
         all_results = []
+        conn = None  # Initialize connection as None
+        successful_commands = 0  # Track successful commands
 
         # Execute each command sequentially
         for cmd_index, command in enumerate(commands, 1):
@@ -236,13 +237,15 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
 
             # Execute single command (with retry mechanism)
             last_exception = None
-            retry = conn_details.retry if conn_details else 3
             command_success = False
 
-            for attempt in range(retry + 1):
+            for attempt in range(command_retry + 1):
                 try:
-                    timeout = conn_details.timeout if conn_details else 10
-                    result = await asyncio.wait_for(conn.run(command, check=True), timeout=timeout)
+                    # Check connection before each command
+                    if not conn or conn._transport is None or conn._transport.is_closing():
+                        conn = await _get_ssh_connection(task, device)
+
+                    result = await asyncio.wait_for(conn.run(command, check=True), timeout=command_timeout)
 
                     if attempt > 0:
                         logger.info(f"[SSH] Command {cmd_index} executed successfully after {attempt + 1} attempts")
@@ -254,12 +257,12 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
 
                     all_results.append(f"Command {cmd_index}: {command}\n{stdout or ''}")
                     command_success = True
+                    successful_commands += 1
                     break
 
                 except TimeoutError:
-                    timeout = conn_details.timeout if conn_details else 10
-                    last_exception = Exception(f"Command execution timeout ({timeout} seconds)")
-                    if attempt < retry:
+                    last_exception = Exception(f"Command execution timeout ({command_timeout} seconds)")
+                    if attempt < command_retry:
                         wait_time = 2**attempt
                         logger.warning(
                             f"[SSH] Command {cmd_index} attempt {attempt + 1} timed out. Waiting {wait_time} seconds before retry..."
@@ -270,7 +273,34 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
 
                 except Exception as e:
                     last_exception = e
-                    if attempt < retry:
+                    # More precise connection-related error detection
+                    is_connection_error = (
+                        isinstance(e, (asyncssh.ConnectionLost, asyncssh.DisconnectError))
+                        or "connection" in str(e).lower()
+                        or "transport" in str(e).lower()
+                        or "network" in str(e).lower()
+                        or "broken pipe" in str(e).lower()
+                    )
+
+                    if is_connection_error:
+                        conn = None
+                        # Immediately remove invalid connection from pool
+                        pool_key = (task.alias, device.name)
+                        if pool_key in _ssh_connection_pools:
+                            try:
+                                invalid_conn = _ssh_connection_pools[pool_key]["connection"]
+                                invalid_conn.close()
+                                await invalid_conn.wait_closed()
+                            except Exception:
+                                pass  # Ignore errors during closing
+                            del _ssh_connection_pools[pool_key]
+                            logger.debug(
+                                f"[SSH] Removed invalid connection from pool: {task.alias} on {device.name} - Error: {type(e).__name__}: {e}"
+                            )
+                    else:
+                        logger.debug(f"[SSH] Command error (connection reusable): {type(e).__name__}: {e}")
+
+                    if attempt < command_retry:
                         wait_time = 2**attempt
                         logger.warning(
                             f"[SSH] Command {cmd_index} attempt {attempt + 1} failed: {e}. Waiting {wait_time} seconds before retry..."
@@ -287,9 +317,21 @@ async def _run_ssh_task(task: TaskConfig, device: DeviceConfig) -> str:
 
         # Combine all command results
         final_result = "\n\n".join(all_results)
-        logger.success(
-            f"[SSH] Successfully completed task {task.alias} on {device.name} - Executed {len(commands)} commands"
-        )
+
+        # Log completion with appropriate level based on success count
+        if successful_commands == len(commands):
+            logger.success(
+                f"[SSH] Successfully completed task {task.alias} on {device.name} - {successful_commands}/{len(commands)} commands successful"
+            )
+        elif successful_commands > 0:
+            logger.warning(
+                f"[SSH] Partially completed task {task.alias} on {device.name} - {successful_commands}/{len(commands)} commands successful"
+            )
+        else:
+            logger.error(
+                f"[SSH] Failed to complete task {task.alias} on {device.name} - 0/{len(commands)} commands successful"
+            )
+
         return final_result
 
     except asyncio.CancelledError:
@@ -344,6 +386,7 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
 
         # Store all OID execution results
         all_results = []
+        successful_oids = 0  # Track successful OIDs
 
         # Execute each OID with its specific type
         for oid_index, (oid, snmp_type) in enumerate(zip(oids, snmp_types, strict=True), 1):
@@ -404,6 +447,7 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
 
                     all_results.append(f"OID {oid_index}: {oid} ({snmp_type})\n{result or ''}")
                     oid_success = True
+                    successful_oids += 1
                     break
 
                 except Exception as e:
@@ -425,7 +469,21 @@ async def _run_snmp_task(task: TaskConfig, device: DeviceConfig) -> str:
 
         # Combine all OID results
         final_result = "\n\n".join(all_results)
-        logger.success(f"[SNMP] Successfully completed task {task.alias} on {device.name} - Processed {len(oids)} OIDs")
+
+        # Log completion with appropriate level based on success count
+        if successful_oids == len(oids):
+            logger.success(
+                f"[SNMP] Successfully completed task {task.alias} on {device.name} - {successful_oids}/{len(oids)} OIDs successful"
+            )
+        elif successful_oids > 0:
+            logger.warning(
+                f"[SNMP] Partially completed task {task.alias} on {device.name} - {successful_oids}/{len(oids)} OIDs successful"
+            )
+        else:
+            logger.error(
+                f"[SNMP] Failed to complete task {task.alias} on {device.name} - 0/{len(oids)} OIDs successful"
+            )
+
         return final_result
 
     except asyncio.CancelledError:
@@ -496,6 +554,24 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     elif output.startswith("CANCELLED:"):
         logger.debug(f"Task {task.alias} was cancelled, not storing result: {output}")
         return None
+
+    # Check if output contains only error messages (for multi-OID SNMP tasks)
+    if "OID " in output and "ERROR:" in output:
+        # Split by sections and check if all sections contain errors
+        sections = [section.strip() for section in output.split("\n\n") if section.strip()]
+        error_sections = 0
+        total_sections = 0
+
+        for section in sections:
+            if "OID " in section:
+                total_sections += 1
+                if "ERROR:" in section:
+                    error_sections += 1
+
+        # If all OID sections contain errors, don't store the result
+        if total_sections > 0 and error_sections == total_sections:
+            logger.warning(f"Task {task.alias} all OIDs failed, not storing result")
+            return None
 
     # If no labels, return original output directly
     if not task.labels:
@@ -626,6 +702,8 @@ def _generate_labels_from_snmp_results(task: TaskConfig, result_sections: list[s
         return {"raw_output": "\n\n".join(result_sections)}
 
     oid_index = 0
+    valid_results_count = 0
+
     for section in result_sections:
         if not section.strip():
             continue
@@ -640,6 +718,12 @@ def _generate_labels_from_snmp_results(task: TaskConfig, result_sections: list[s
 
         # Skip if this is not an OID section
         if "OID " not in header_line:
+            continue
+
+        # Skip if this OID section contains an error
+        if "ERROR:" in content:
+            logger.debug(f"Task {task.alias} OID {oid_index + 1} contains error, skipping: {content}")
+            oid_index += 1
             continue
 
         # Determine SNMP operation type from header
@@ -673,31 +757,50 @@ def _generate_labels_from_snmp_results(task: TaskConfig, result_sections: list[s
                     result[label] = str(calculated_value)
                 else:
                     result[label] = value
+
+            if walk_values:  # Only count if there were actual values
+                valid_results_count += 1
         else:
             # Single value from snmpget
-            # Apply calculation if configured
-            if (
-                parse_config
-                and parse_config.calculate
-                and oid_index < len(parse_config.calculate)
-                and parse_config.calculate[oid_index]
-            ):
-                calculated_value = _calculate_value(content, parse_config.calculate[oid_index])
-                if calculated_value is None:
-                    logger.warning(f"Task {task.alias} label {base_label} calculation failed, not storing result")
-                    return {}
-                result[base_label] = str(calculated_value)
-            else:
-                result[base_label] = content
+            if content:  # Only process if there's actual content
+                # Apply calculation if configured
+                if (
+                    parse_config
+                    and parse_config.calculate
+                    and oid_index < len(parse_config.calculate)
+                    and parse_config.calculate[oid_index]
+                ):
+                    calculated_value = _calculate_value(content, parse_config.calculate[oid_index])
+                    if calculated_value is None:
+                        logger.warning(f"Task {task.alias} label {base_label} calculation failed, not storing result")
+                        return {}
+                    result[base_label] = str(calculated_value)
+                else:
+                    result[base_label] = content
+
+                valid_results_count += 1
 
         oid_index += 1
+
+    # Return empty dict if no valid results were found
+    if valid_results_count == 0:
+        logger.warning(f"Task {task.alias} no valid OID results found, not storing data")
+        return {}
 
     return result
 
 
-async def run_task(task: TaskConfig, device: DeviceConfig) -> dict[str, Any] | None:
+async def run_task(
+    task: TaskConfig, device: DeviceConfig, command_timeout: int = 300, command_retry: int = 0
+) -> dict[str, Any] | None:
     """
     Run specified task and return parsed results.
+
+    Args:
+        task: Task configuration
+        device: Device configuration
+        command_timeout: Command execution timeout in seconds (default: 300 = 5 minutes)
+        command_retry: Command retry count (default: 0 = no retry)
 
     Returns:
         A dictionary containing the raw output and parsed values, or None if task is disabled.
@@ -707,7 +810,7 @@ async def run_task(task: TaskConfig, device: DeviceConfig) -> dict[str, Any] | N
 
     raw_output = ""
     if task.protocol == "ssh":
-        raw_output = await _run_ssh_task(task, device)
+        raw_output = await _run_ssh_task(task, device, command_timeout, command_retry)
     elif task.protocol == "snmp":
         raw_output = await _run_snmp_task(task, device)
     else:

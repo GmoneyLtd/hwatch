@@ -28,6 +28,9 @@ class TaskScheduler:
         start_time = datetime.now()
         logger.info(f"Starting job execution: {job_id}")
 
+        task_success = False
+        results = None
+
         try:
             # Run collection task
             results = await run_task(task, device)
@@ -36,89 +39,93 @@ class TaskScheduler:
                 logger.warning(
                     f"Job {job_id} returned no results (possibly disabled, execution failed, or match failed)."
                 )
-                return
+                task_success = False
+            else:
+                task_success = True
+                # Process results based on storage strategy
+                if task.storage == "sqlite":
+                    await save_result(task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"})
+                elif task.storage == "file":
+                    outfile_dir = "outfile"
+                    os.makedirs(outfile_dir, exist_ok=True)
+                    # Use task alias and device name combination as filename, append mode
+                    file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
 
-            # Process results based on storage strategy
-            if task.storage == "sqlite":
-                await save_result(task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"})
-            elif task.storage == "file":
-                outfile_dir = "outfile"
-                os.makedirs(outfile_dir, exist_ok=True)
-                # Use task alias and device name combination as filename, append mode
-                file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
+                    # Build complete file content
+                    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                    end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
-                # Build complete file content
-                start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                end_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                    # Build task information header
+                    header_lines = [
+                        f"=================== {start_time_str} ===================",
+                        f"Task: {task.alias}",
+                        f"Device: {device.name} ({device.ip})",
+                        f"Protocol: {task.protocol}",
+                    ]
 
-                # Build task information header
-                header_lines = [
-                    f"=================== {start_time_str} ===================",
-                    f"Task: {task.alias}",
-                    f"Device: {device.name} ({device.ip})",
-                    f"Protocol: {task.protocol}",
-                ]
+                    # Add protocol-specific parameters
+                    if task.protocol == "ssh" and task.ssh:
+                        header_lines.append(f"Command: {str(task.ssh.command)}")
+                    elif task.protocol == "snmp" and task.snmp:
+                        header_lines.append(f"OID: {task.snmp.oid}")
+                        header_lines.append(f"Type: {task.snmp.type}")
 
-                # Add protocol-specific parameters
-                if task.protocol == "ssh" and task.ssh:
-                    header_lines.append(f"Command: {str(task.ssh.command)}")
-                elif task.protocol == "snmp" and task.snmp:
-                    header_lines.append(f"OID: {task.snmp.oid}")
-                    header_lines.append(f"Type: {task.snmp.type}")
+                    # Build result content
+                    result_lines = ["Results:"]
+                    if "raw_output" in results:
+                        result_lines.append(results["raw_output"])
+                    else:
+                        for key, value in results.items():
+                            result_lines.append(f"{key}: {value}")
 
-                # Build result content
-                result_lines = ["Results:"]
-                if "raw_output" in results:
-                    result_lines.append(results["raw_output"])
-                else:
-                    for key, value in results.items():
-                        result_lines.append(f"{key}: {value}")
+                    # Build end marker
+                    footer_lines = [
+                        "",  # Empty line separator
+                        f"+------------------ {end_time_str} ------------------+",
+                        "",
+                        "",
+                        "",
+                    ]
 
-                # Build end marker
-                footer_lines = [
-                    "",  # Empty line separator
-                    f"+------------------ {end_time_str} ------------------+",
-                    "",
-                    "",
-                    "",
-                ]
-
-                # Merge all content and write to file
-                all_content = "\n".join(header_lines + result_lines + footer_lines)
-                with open(file_path, "a", encoding="utf-8") as f:
-                    f.write(all_content)
-                logger.info(f"Job {job_id} results have been appended to {file_path}")
-
-            # Handle execution frequency and 'delay' mode rescheduling
-            self.job_counts[job_id] = self.job_counts.get(job_id, 0) + 1
-
-            schedule = task.schedule
-            # If execution count limit exists and reached, stop
-            if schedule.frequency > 0 and self.job_counts[job_id] >= schedule.frequency:
-                logger.info(
-                    f"Job {job_id} has reached its execution frequency {schedule.frequency} times, will no longer be scheduled."
-                )
-                return
-
-            # If in delay mode, need to manually schedule next execution here
-            if schedule.mode == "delay" and schedule.seconds is not None:
-                next_run_time = datetime.now() + timedelta(seconds=schedule.seconds)
-                self.scheduler.add_job(
-                    self._execute_job,
-                    "date",
-                    run_date=next_run_time,
-                    args=[task, device],
-                    id=f"{job_id}_adhoc_{self.job_counts[job_id]}",
-                )
-                logger.info(f"Job {job_id} (delay mode) has scheduled next run at {next_run_time}")
+                    # Merge all content and write to file
+                    all_content = "\n".join(header_lines + result_lines + footer_lines)
+                    with open(file_path, "a", encoding="utf-8") as f:
+                        f.write(all_content)
+                    logger.info(f"Job {job_id} results have been appended to {file_path}")
 
         except asyncio.CancelledError:
             # Handle graceful shutdown - don't log as error since it's expected
             logger.debug(f"Job {job_id} was cancelled during shutdown")
             # Don't re-raise the exception to avoid APScheduler error logs
+            return  # Early return for cancellation, no rescheduling
         except Exception as e:
             logger.error(f"Job {job_id} execution failed: {e}")
+            task_success = False
             # Don't re-raise the exception to prevent APScheduler from logging it again
+
+        # Handle execution frequency and rescheduling logic (regardless of success/failure)
+        self.job_counts[job_id] = self.job_counts.get(job_id, 0) + 1
+
+        schedule = task.schedule
+        # If execution count limit exists and reached, stop
+        if schedule.frequency > 0 and self.job_counts[job_id] >= schedule.frequency:
+            logger.info(
+                f"Job {job_id} has reached its execution frequency {schedule.frequency} times, will no longer be scheduled."
+            )
+            return
+
+        # If in delay mode, need to manually schedule next execution here
+        if schedule.mode == "delay" and schedule.seconds is not None:
+            next_run_time = datetime.now() + timedelta(seconds=schedule.seconds)
+            self.scheduler.add_job(
+                self._execute_job,
+                "date",
+                run_date=next_run_time,
+                args=[task, device],
+                id=f"{job_id}_adhoc_{self.job_counts[job_id]}",
+            )
+            status_msg = "successful" if task_success else "failed"
+            logger.info(f"Job {job_id} (delay mode) {status_msg}, scheduled next run at {next_run_time}")
 
     def schedule_all_tasks(self):
         """Schedule all enabled tasks according to current configuration."""
