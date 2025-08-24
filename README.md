@@ -181,6 +181,7 @@ graph TB
 - **Protocol Support**: SSH command execution and SNMP data collection
 - **Data Parsing**: Advanced regex parsing with mathematical operations
 - **Error Recovery**: Retry mechanisms and connection health monitoring
+- **Performance Optimization**: Regex compilation caching and periodic cleanup
 
 ### 4. Web Server (`core/web_server.py`)
 ```mermaid
@@ -209,6 +210,7 @@ graph TB
 - **Interactive Dashboard**: Real-time monitoring and visualization
 - **Authentication**: Session-based security with configurable timeouts
 - **Responsive Design**: Mobile-friendly web interface
+- **Help System**: Built-in documentation accessible via help icon or /help route
 
 ### 5. Configuration System (`core/config_loader.py`)
 ```mermaid
@@ -407,17 +409,18 @@ schedule:
 
 **Scheduling Mode Explanation:**
 - `interval`: Fixed interval execution, next execution scheduled immediately after current execution starts
-- `delay`: Delayed execution, next execution scheduled after waiting specified time following completion
+- `delay`: Delayed execution, next execution scheduled after waiting specified time following completion. In delay mode, tasks continue to reschedule after both success and failure.
 
-#### SSH Task Configuration
+#### SSH Task Configuration (NEW PROTOCOL-SEPARATED FORMAT)
 
 **Single Command Execution:**
 ```yaml
 - alias: "get_router_version"
   enabled: true
   protocol: "ssh"
-  command: 
-  - "show version"
+  ssh:
+    command: 
+    - "show version"
   targets: ["Router_A"]
   schedule:
     frequency: 1                # Execute only once
@@ -429,9 +432,10 @@ schedule:
 - alias: "system_check"
   enabled: true
   protocol: "ssh"
-  command: 
-  - "get system status"
-  - "get system arp"
+  ssh:
+    command: 
+    - "get system status"
+    - "get system arp"
   targets: ["Fortinet_60"]
   schedule:
     frequency: 20
@@ -445,13 +449,14 @@ schedule:
 - alias: "parse_system_info"
   enabled: true
   protocol: "ssh"
-  command: 
-  - "get system status"
-  parse:
-    regex: "(?s)BIOS version:\\s*(\\d+).*?Branch point:\\s*(\\d+)"
-    calculate:
-    - "/1000000"                # First value divided by 1000000
-    - "*10"                     # Second value multiplied by 10
+  ssh:
+    command: 
+    - "get system status"
+    parse:
+      regex: "(?s)BIOS version:\\s*(\\d+).*?Branch point:\\s*(\\d+)"
+      calculate:
+      - "/1000000"                # First value divided by 1000000
+      - "*10"                     # Second value multiplied by 10
   labels:
   - "BIOS_Version"
   - "Branch_Point"
@@ -696,6 +701,18 @@ tasks:
   schedule:
     frequency: 1
   storage: "sqlite"
+
+# SSH Task - Operational command (no result storage)
+- alias: "clear_router_a_counters"
+  enabled: false
+  protocol: "ssh"
+  ssh:
+    command:
+    - "clear counters"
+  targets: ["Router_A"]
+  schedule:
+    frequency: 1
+  storage: null  # No result storage
 ```
 
 ### Key Changes in New Configuration Format
@@ -703,7 +720,7 @@ tasks:
 #### Protocol-Specific Configuration Structure
 - **SSH Tasks**: Use `ssh:` block with `command:` list
 - **SNMP Tasks**: Use `snmp:` block with `oid:` and `type:` lists
-- **Parse Configuration**: Can be placed in either `ssh:` or `snmp:` blocks
+- **Parse Configuration**: Must be placed within protocol-specific blocks (`ssh:` or `snmp:`)
 
 #### Enhanced SNMP Operations
 - **Mixed Operations**: Each OID can have its own operation type (snmpget/snmpwalk)
@@ -714,22 +731,6 @@ tasks:
 - The old configuration format is **not supported**
 - All configurations must be updated to the new protocol-separated format
 - Enhanced validation prevents configuration errors
-  targets: ["Router_A"]
-  schedule:
-    frequency: 1  # Execute only once
-  storage: "sqlite"
-
-# SSH Task - Operational command (no result storage)
-- alias: "clear_router_a_counters"
-  enabled: false
-  protocol: "ssh"
-  command: 
-  - "clear counters"
-  targets: ["Router_A"]
-  schedule:
-    frequency: 1
-  storage: null  # No result storage
-```
 
 ## 📊 Web Interface Features
 
@@ -738,6 +739,7 @@ tasks:
 - Interactive charts and graphs
 - Task execution statistics
 - System health indicators
+- Built-in help system accessible via help icon (?)
 
 ### Task Management
 - View all configured tasks
@@ -798,6 +800,7 @@ services:
       - ./log:/app/log
       - ./outfile:/app/outfile
     environment:
+      - WEB_USERNAME=admin
       - WEB_USERNAME=admin
       - WEB_PASSWORD=yourpassword
       - LOG_LEVEL=INFO
@@ -1251,9 +1254,14 @@ graph TB
 
 ### Task Scheduling Mechanism
 - **Interval Mode**: Fixed interval execution, next execution calculated based on task start time
-- **Delay Mode**: Delayed execution, wait specified time after task completion before next execution
+- **Delay Mode**: Delayed execution, wait specified time after task completion before next execution. Tasks continue to reschedule after both success and failure, with the next execution time calculated after task completion using the current time.
 - **Frequency Control**: Support limiting task execution count
 - **Smart Incremental Update**: Only refresh changed tasks when config changes, keep other tasks running
+
+### Performance Optimization Features
+- **Regex Compilation Caching**: Compiled regex patterns are cached to avoid repeated compilation
+- **Periodic Connection Cleanup**: Connection pools are cleaned up periodically (every 5 minutes) to avoid frequent cleanup operations
+- **Efficient Resource Management**: Connection pooling and engine pooling reduce overhead
 
 ### 🔄 Incremental Update Mechanism
 
@@ -1610,6 +1618,10 @@ For questions or suggestions, feel free to submit Issues or Pull Requests.
 - SQLite for efficient data storage
 - Connection pool size limits
 - Automatic garbage collection
+
+### Regex Performance Optimization
+- **Regex Compilation Caching**: Compiled regex patterns are cached to avoid repeated compilation overhead
+- **Conditional Parsing**: When tasks don't have parse configurations, regex operations are skipped entirely to improve efficiency
 
 ## 🔧 Troubleshooting
 
