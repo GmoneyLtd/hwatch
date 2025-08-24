@@ -14,7 +14,7 @@ from core.database import close_db, init_db
 from core.file_buffer import get_file_buffer
 
 # Import optimization modules
-from core.performance_monitor import performance_monitor
+# from core.performance_monitor import performance_monitor
 from core.scheduler import TaskScheduler
 
 # Import core modules

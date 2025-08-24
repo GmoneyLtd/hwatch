@@ -9,7 +9,34 @@ HWatch is a lightweight, high-performance network device monitoring system built
 
 ## 📋 Release Information
 
-### Version 0.1.4.1 (Latest) - Chart Label Filter Enhancement
+### Version 0.1.5 (Latest) - Lightweight Performance Optimization
+**Release Date**: August 25, 2025
+
+#### 🎯 Lightweight Architecture
+- **Performance Monitoring Disabled**: Commented out all performance monitoring code to create a lightweight monitoring system
+- **Module Preservation**: Kept performance monitoring modules intact for future re-enablement if needed
+- **API Route Deactivation**: Disabled performance monitoring web API routes while preserving the code structure
+- **Runtime Optimization**: Eliminated performance monitoring overhead for better resource efficiency
+
+#### 🔧 Code Organization
+- **Selective Commenting**: Strategically commented out performance monitoring imports and function calls
+- **Error Handling**: Provided default return values for disabled monitoring functions to maintain API compatibility
+- **Syntax Fixes**: Resolved all compilation errors and undefined variable issues
+- **Clean Architecture**: Maintained clean separation between core functionality and optional monitoring features
+
+#### 💡 Benefits
+- **Reduced Resource Usage**: Lower CPU and memory footprint without performance monitoring overhead
+- **Simplified Deployment**: Easier deployment and maintenance for basic monitoring needs
+- **Future Flexibility**: Easy to re-enable performance monitoring by uncommenting relevant code sections
+- **Maintained Functionality**: Core monitoring capabilities remain fully functional
+
+#### 🔄 Affected Components
+- Web server routing (monitoring API endpoints disabled)
+- Task scheduler (performance metrics collection disabled)
+- Data collector (performance tracking disabled)
+- Monitoring API (endpoints return empty/default responses)
+
+### Version 0.1.4.1 - Chart Label Filter Enhancement
 **Release Date**: August 25, 2025
 
 #### 🎯 New Features

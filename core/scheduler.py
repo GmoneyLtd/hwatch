@@ -14,7 +14,8 @@ from core.config_loader import AppConfig, DeviceConfig, TaskConfig
 from core.database import save_result
 from core.error_handler import error_handler
 from core.file_buffer import get_file_buffer
-from core.performance_monitor import performance_monitor
+
+# from core.performance_monitor import performance_monitor
 from core.string_optimizer import get_template_cache
 
 
@@ -37,70 +38,70 @@ class TaskScheduler:
         results = None
 
         # Performance monitoring
-        performance_monitor.increment_counter("task_executions")
-        
-        async with performance_monitor.measure_time("task_execution", {"task": task.alias, "device": device.name}):
-            try:
-                # Run collection task
-                results = await run_task(task, device)
+        # performance_monitor.increment_counter("task_executions")
 
-                if results is None:
-                    logger.warning(
-                        f"Job {job_id} returned no results (possibly disabled, execution failed, or match failed)."
-                    )
-                    task_success = False
-                    performance_monitor.increment_counter("failed_tasks")
-                else:
-                    task_success = True
-                    performance_monitor.increment_counter("successful_tasks")
-                    
-                    # Process results based on storage strategy
-                    if task.storage == "sqlite":
-                        # Use batch writer for better performance
-                        async with performance_monitor.measure_time("database_save"):
-                            await batch_save_result(
-                                task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"}
-                            )
-                    elif task.storage == "file":
-                        # Use optimized file writing
-                        async with performance_monitor.measure_time("file_save"):
-                            outfile_dir = "outfile"
-                            file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
+        # async with performance_monitor.measure_time("task_execution", {"task": task.alias, "device": device.name}):
+        try:
+            # Run collection task
+            results = await run_task(task, device)
 
-                            # Use template cache for efficient string formatting
-                            template_cache = get_template_cache()
-                            end_time = datetime.now()
-                            content = template_cache.format_file_content(task, device, results, start_time, end_time)
-
-                            # Use async file buffer for better I/O performance
-                            file_buffer = get_file_buffer()
-                            await file_buffer.write_buffered(file_path, content)
-                            logger.debug(f"Job {job_id} results buffered to {file_path}")
-
-            except asyncio.CancelledError:
-                # Handle graceful shutdown - don't log as error since it's expected
-                logger.debug(f"Job {job_id} was cancelled during shutdown")
-                performance_monitor.increment_counter("cancelled_tasks")
-                # Don't re-raise the exception to avoid APScheduler error logs
-                return  # Early return for cancellation, no rescheduling
-            except Exception as e:
-                # Enhanced error handling with classification and recovery
-                should_retry = await error_handler.handle_error(
-                    exception=e,
-                    device=device.name,
-                    task=task.alias,
-                    context={"job_id": job_id, "start_time": start_time}
+            if results is None:
+                logger.warning(
+                    f"Job {job_id} returned no results (possibly disabled, execution failed, or match failed)."
                 )
-                
-                if should_retry:
-                    logger.info(f"Job {job_id} will be retried based on error analysis")
-                    performance_monitor.increment_counter("retried_tasks")
-                else:
-                    logger.error(f"Job {job_id} execution failed permanently: {e}")
-                    performance_monitor.increment_counter("permanently_failed_tasks")
-                
                 task_success = False
-                # Don't re-raise the exception to prevent APScheduler from logging it again
+                # performance_monitor.increment_counter("failed_tasks")
+            else:
+                task_success = True
+                # performance_monitor.increment_counter("successful_tasks")
+
+                # Process results based on storage strategy
+                if task.storage == "sqlite":
+                    # Use batch writer for better performance
+                    # async with performance_monitor.measure_time("database_save"):
+                    await batch_save_result(
+                        task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"}
+                    )
+                elif task.storage == "file":
+                    # Use optimized file writing
+                    # async with performance_monitor.measure_time("file_save"):
+                    outfile_dir = "outfile"
+                    file_path = os.path.join(outfile_dir, f"{task.alias}_{device.name}.log")
+
+                    # Use template cache for efficient string formatting
+                    template_cache = get_template_cache()
+                    end_time = datetime.now()
+                    content = template_cache.format_file_content(task, device, results, start_time, end_time)
+
+                    # Use async file buffer for better I/O performance
+                    file_buffer = get_file_buffer()
+                    await file_buffer.write_buffered(file_path, content)
+                    logger.debug(f"Job {job_id} results buffered to {file_path}")
+
+        except asyncio.CancelledError:
+            # Handle graceful shutdown - don't log as error since it's expected
+            logger.debug(f"Job {job_id} was cancelled during shutdown")
+            # performance_monitor.increment_counter("cancelled_tasks")
+            # Don't re-raise the exception to avoid APScheduler error logs
+            return  # Early return for cancellation, no rescheduling
+        except Exception as e:
+            # Enhanced error handling with classification and recovery
+            should_retry = await error_handler.handle_error(
+                exception=e,
+                device=device.name,
+                task=task.alias,
+                context={"job_id": job_id, "start_time": start_time},
+            )
+
+            if should_retry:
+                logger.info(f"Job {job_id} will be retried based on error analysis")
+                # performance_monitor.increment_counter("retried_tasks")
+            else:
+                logger.error(f"Job {job_id} execution failed permanently: {e}")
+                # performance_monitor.increment_counter("permanently_failed_tasks")
+
+            task_success = False
+            # Don't re-raise the exception to prevent APScheduler from logging it again
 
         # Handle execution frequency and rescheduling logic (regardless of success/failure)
         self.job_counts[job_id] = self.job_counts.get(job_id, 0) + 1
