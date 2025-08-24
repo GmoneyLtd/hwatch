@@ -9,7 +9,33 @@ HWatch is a lightweight, high-performance network device monitoring system built
 
 ## 📋 Release Information
 
-### Version 0.1.4 (Latest) - Advanced Performance Optimization Release
+### Version 0.1.4.1 (Latest) - Chart Label Filter Enhancement
+**Release Date**: August 25, 2025
+
+#### 🎯 New Features
+- **Label Filter in Charts**: Added a new Label dropdown filter between Task and Device filters in the chart view
+- **Smart Label Detection**: Automatically extracts base labels from database keys, handling snmpwalk suffixes intelligently
+- **Progressive Filtering**: Implemented Task → Label → Device → Chart workflow for better data visualization
+- **SNMP Walk Support**: Properly handles labels with numeric suffixes (e.g., `fgProcessorUsage.1`, `fgProcessorUsage.2`)
+
+#### 🔧 Technical Improvements
+- **API Enhancement**: Extended `/api/chart` endpoint to support label parameter filtering
+- **Database Optimization**: Added `get_available_labels()` function with smart suffix processing
+- **Frontend UX**: Improved user interaction flow with cascading dropdown selections
+- **Data Processing**: Enhanced chart data filtering to match selected labels accurately
+
+#### 🐛 Bug Fixes
+- Fixed dropdown option persistence issue when switching between tasks and labels
+- Resolved label selection state management in frontend
+- Corrected filter option availability logic to maintain proper task/label relationships
+
+#### 💡 User Experience
+- More granular control over chart data visualization
+- Cleaner separation of multi-label task data
+- Intuitive progressive selection workflow
+- Better alignment with configuration file structure
+
+### Version 0.1.4 - Advanced Performance Optimization Release
 **Release Date**: August 24, 2025
 
 #### 🚀 Major Performance Improvements
