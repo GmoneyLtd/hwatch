@@ -353,12 +353,12 @@ class TaskScheduler:
         elif schedule.mode == "interval" and schedule.seconds:
             # Interval mode: delay within 0 to min(interval * 3, 60s)
             max_delay = min(schedule.seconds * 3, 60)
-            return random.uniform(0, max_delay)
+            return random.randint(0, max_delay)
 
         elif schedule.mode == "delay" and schedule.seconds:
             # Delay mode: delay within 0 to min(delay_time, 60s)
             max_delay = min(schedule.seconds, 60)
-            return random.uniform(0, max_delay)
+            return random.randint(0, max_delay)
 
         else:
             # Default: small random delay
