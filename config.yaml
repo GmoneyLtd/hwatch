@@ -152,7 +152,7 @@ tasks:
   protocol: snmp
   schedule:
     frequency: 0
-    mode: interval
+    mode: delay
     seconds: 15
   snmp:
     oid:

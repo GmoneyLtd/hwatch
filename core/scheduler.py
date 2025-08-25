@@ -60,8 +60,9 @@ class TaskScheduler:
                 if task.storage == "sqlite":
                     # Use batch writer for better performance
                     # async with performance_monitor.measure_time("database_save"):
+                    # 使用任务开始时间作为数据采集时间戳
                     await batch_save_result(
-                        task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"}
+                        task.alias, device.name, {k: v for k, v in results.items() if k != "raw_output"}, start_time
                     )
                 elif task.storage == "file":
                     # Use optimized file writing
@@ -353,12 +354,12 @@ class TaskScheduler:
         elif schedule.mode == "interval" and schedule.seconds:
             # Interval mode: delay within 0 to min(interval * 3, 60s)
             max_delay = min(schedule.seconds * 3, 60)
-            return random.randint(0, max_delay)
+            return random.uniform(0, max_delay)
 
         elif schedule.mode == "delay" and schedule.seconds:
             # Delay mode: delay within 0 to min(delay_time, 60s)
             max_delay = min(schedule.seconds, 60)
-            return random.randint(0, max_delay)
+            return random.uniform(0, max_delay)
 
         else:
             # Default: small random delay

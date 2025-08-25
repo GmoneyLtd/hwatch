@@ -2,7 +2,7 @@ import asyncio
 import time
 from collections import defaultdict
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -58,7 +58,9 @@ class BatchDatabaseWriter:
                 # 仍然没有事件循环, 忽略
                 pass
 
-    async def add_record(self, task_alias: str, device_name: str, results: dict[str, Any]):
+    async def add_record(
+        self, task_alias: str, device_name: str, results: dict[str, Any], timestamp: datetime | None = None
+    ):
         """添加记录到批量写入缓冲区"""
         if self._shutdown:
             return False
@@ -66,7 +68,9 @@ class BatchDatabaseWriter:
         # 确保定时刷新任务已启动
         self._ensure_flush_task_started()
 
-        timestamp = datetime.now()
+        # 使用传入的时间戳或当前时间
+        if timestamp is None:
+            timestamp = datetime.now()
 
         # 将结果字典转换为多个记录
         records = []
@@ -164,10 +168,12 @@ def get_batch_writer() -> BatchDatabaseWriter:
     return _batch_writer
 
 
-async def batch_save_result(task_alias: str, device_name: str, results: dict[str, Any]) -> bool:
+async def batch_save_result(
+    task_alias: str, device_name: str, results: dict[str, Any], timestamp: datetime | None = None
+) -> bool:
     """批量保存任务结果"""
     writer = get_batch_writer()
-    return await writer.add_record(task_alias, device_name, results)
+    return await writer.add_record(task_alias, device_name, results, timestamp)
 
 
 async def shutdown_batch_writer():
