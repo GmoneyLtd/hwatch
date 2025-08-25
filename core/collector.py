@@ -51,16 +51,22 @@ async def _get_ssh_connection(task: TaskConfig, device: DeviceConfig) -> asyncss
         connection_cache = get_connection_cache()
 
         async def check_connection_func(connection):
-            # More comprehensive connection status check
-            if (
-                connection._transport is not None
-                and not connection._transport.at_eof()
-                and not connection._transport.is_closing()
-            ):
-                # Try sending a simple command to verify connection
+            """Optimized connection status check for asyncssh 2.21.0+"""
+            try:
+                # Basic connection state check
+                if connection._transport is None or connection._transport.is_closing():
+                    return False
+
+                # For asyncssh 2.21.0, at_eof is not available on transport layer
+                # Skip EOF check and rely on actual command test for reliability
+
+                # Verify connection with lightweight command
                 await asyncio.wait_for(connection.run("echo test", check=True), timeout=2)
                 return True
-            return False
+
+            except (TimeoutError, Exception) as e:
+                logger.debug(f"Connection check failed: {e}")
+                return False
 
         try:
             is_valid = await connection_cache.is_valid_cached(

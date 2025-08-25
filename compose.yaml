@@ -1,6 +1,6 @@
 services:
   hwatch:
-    image: registry.cn-hangzhou.aliyuncs.com/apuer/hwatch:latest
+    image: registry.cn-hangzhou.aliyuncs.com/gmoneyltd/hwatch:latest
     container_name: hwatch4play   
     hostname: hwatch4play
     restart: unless-stopped
