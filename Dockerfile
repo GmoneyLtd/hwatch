@@ -10,7 +10,7 @@ RUN uv sync --frozen --no-cache
 COPY . .
 
 # -------------- 运行阶段 --------------
-FROM python:3.13.6-alpine
+FROM python:3.13.7-alpine
 # 使用 apk 安装 curl
 RUN apk add --no-cache curl
 WORKDIR /app
