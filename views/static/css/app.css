@@ -436,7 +436,7 @@ body {
     white-space: nowrap;
     font-size: 14px;
     flex-shrink: 0;
-    width: 60px;
+    /* width: 60px; */
 }
 
 .filter-group input,
