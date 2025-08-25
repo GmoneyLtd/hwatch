@@ -9,7 +9,34 @@ HWatch is a lightweight, high-performance network device monitoring system built
 
 ## 📋 Release Information
 
-### Version 0.1.5 (Latest) - Lightweight Performance Optimization
+### Version 0.1.6 (Latest) - Task Scheduling Optimization
+**Release Date**: August 25, 2025
+
+#### 🎯 Task Scheduling Enhancement
+- **Staggered Task Startup**: Implemented intelligent random delay for task initialization to prevent thundering herd effect
+- **Smart Delay Calculation**: Dynamic delay calculation based on task scheduling mode and interval settings
+- **Preserved Execution Intervals**: Task execution intervals remain completely unaffected, only first startup time is randomized
+- **Resource Load Balancing**: Distributes system resource usage more evenly across time
+
+#### 🔧 Scheduling Algorithm Improvements
+- **Single Execution Tasks**: 0-10 seconds random startup delay
+- **Interval Mode Tasks**: 0 to min(interval × 3, 60s) random startup delay
+- **Delay Mode Tasks**: 0 to min(delay_time, 60s) random startup delay
+- **Minimal Code Changes**: Optimized existing scheduling logic with minimal modifications
+
+#### 💡 Performance Benefits
+- **Eliminated Resource Spikes**: Prevents CPU and network resource peaks during system startup
+- **Improved System Stability**: More predictable and stable resource utilization patterns
+- **Better Scalability**: Handles large numbers of concurrent tasks more efficiently
+- **Maintained Precision**: Task execution timing precision completely preserved
+
+#### 🔄 Technical Implementation
+- **Random Delay Injection**: Added `_calculate_start_delay()` method for intelligent delay calculation
+- **First Execution Timing**: Uses `next_run_time` parameter to control initial task execution
+- **Backward Compatibility**: Fully compatible with existing configurations and task definitions
+- **Enhanced Logging**: Improved log messages showing actual startup delays for better monitoring
+
+### Version 0.1.5 - Lightweight Performance Optimization
 **Release Date**: August 25, 2025
 
 #### 🎯 Lightweight Architecture
@@ -1731,10 +1758,168 @@ graph TB
 - **Null**: No result storage, suitable for operational commands
 
 ### Task Scheduling Mechanism
-- **Interval Mode**: Fixed interval execution, next execution calculated based on task start time
-- **Delay Mode**: Delayed execution, wait specified time after task completion before next execution. Tasks continue to reschedule after both success and failure, with the next execution time calculated after task completion using the current time.
+- **Interval Mode**: Fixed interval execution, next execution scheduled immediately after current execution starts
+- **Delay Mode**: Delayed execution, next execution scheduled after waiting specified time following completion. In delay mode, tasks continue to reschedule after both success and failure.
 - **Frequency Control**: Support limiting task execution count
 - **Smart Incremental Update**: Only refresh changed tasks when config changes, keep other tasks running
+- **Staggered Startup (v0.1.6)**: Intelligent random delay prevents thundering herd effect during system startup
+
+### 🚀 Task Scheduling Optimization (v0.1.6)
+
+#### Problem Solved: Thundering Herd Effect
+When starting a system with 100+ tasks configured with 10-second intervals, all tasks would start simultaneously, causing:
+- **Resource Spikes**: CPU utilization peaks followed by idle periods
+- **Network Congestion**: All devices hit simultaneously with requests
+- **System Instability**: Unpredictable performance patterns
+
+#### Solution: Intelligent Staggered Startup
+The system now introduces smart random delays **only for the first execution** of each task, while preserving exact execution intervals for subsequent runs.
+
+#### Delay Calculation Algorithm
+```python
+def _calculate_start_delay(self, schedule) -> float:
+    if schedule.frequency == 1:
+        # Single execution: 0-10 seconds random delay
+        return random.uniform(0, 10)
+    
+    elif schedule.mode == "interval" and schedule.seconds:
+        # Interval mode: 0 to min(interval × 3, 60s) random delay
+        max_delay = min(schedule.seconds * 3, 60)
+        return random.uniform(0, max_delay)
+    
+    elif schedule.mode == "delay" and schedule.seconds:
+        # Delay mode: 0 to min(delay_time, 60s) random delay
+        max_delay = min(schedule.seconds, 60)
+        return random.uniform(0, max_delay)
+    
+    else:
+        # Default: 0-5 seconds random delay
+        return random.uniform(0, 5)
+```
+
+#### Delay Strategy Examples
+
+| Task Type | Interval | Random Delay Range | Example |
+|-----------|----------|-------------------|---------|
+| Single execution | N/A | 0-10s | Task starts 0-10s after system startup |
+| Interval: 10s | 10s | 0-30s | Task starts 0-30s after startup, then every 10s |
+| Interval: 60s | 60s | 0-60s | Task starts 0-60s after startup, then every 60s |
+| Interval: 300s | 300s | 0-60s | Task starts 0-60s after startup, then every 300s |
+| Delay: 30s | 30s | 0-30s | Task starts 0-30s after startup, then 30s after completion |
+| Delay: 120s | 120s | 0-60s | Task starts 0-60s after startup, then 120s after completion |
+
+#### Performance Impact
+
+**Before Optimization:**
+```
+Time:    0s    10s   20s   30s   40s
+Task A:  |███  |███  |███  |███  |███
+Task B:  |███  |███  |███  |███  |███  
+Task C:  |███  |███  |███  |███  |███
+CPU:     100%  100%  100%  100%  100%
+```
+
+**After Optimization:**
+```
+Time:    0s    10s   20s   30s   40s
+Task A:  |███  |███  |███  |███  |███
+Task B:    |███  |███  |███  |███  |███
+Task C:      |███  |███  |███  |███  |███
+CPU:     ████████████████████████████
+```
+
+#### Key Benefits
+- **Eliminated Resource Spikes**: CPU usage becomes smooth instead of spiky
+- **Preserved Timing Accuracy**: Task execution intervals remain exactly as configured
+- **Improved Scalability**: System handles 100+ concurrent tasks efficiently
+- **Better Device Health**: Target devices receive distributed load instead of simultaneous bursts
+- **Minimal Configuration Impact**: No configuration changes required, works automatically
+
+#### Implementation Details
+- **First Execution Only**: Random delay applies only to initial task startup
+- **Preserved Intervals**: All subsequent executions maintain exact configured timing
+- **Intelligent Limits**: Maximum delays are capped to prevent excessive startup times
+- **Backward Compatible**: Existing configurations work without modification
+- **Enhanced Logging**: Startup delays are logged for monitoring and debugging
+- **Staggered Startup (v0.1.6)**: Intelligent random delay prevents thundering herd effect during system startup
+
+### 🚀 Task Scheduling Optimization (v0.1.6)
+
+#### Problem Solved: Thundering Herd Effect
+When starting a system with 100+ tasks configured with 10-second intervals, all tasks would start simultaneously, causing:
+- **Resource Spikes**: CPU utilization peaks followed by idle periods
+- **Network Congestion**: All devices hit simultaneously with requests
+- **System Instability**: Unpredictable performance patterns
+
+#### Solution: Intelligent Staggered Startup
+The system now introduces smart random delays **only for the first execution** of each task, while preserving exact execution intervals for subsequent runs.
+
+#### Delay Calculation Algorithm
+```python
+def _calculate_start_delay(self, schedule) -> float:
+    if schedule.frequency == 1:
+        # Single execution: 0-10 seconds random delay
+        return random.uniform(0, 10)
+    
+    elif schedule.mode == "interval" and schedule.seconds:
+        # Interval mode: 0 to min(interval × 3, 60s) random delay
+        max_delay = min(schedule.seconds * 3, 60)
+        return random.uniform(0, max_delay)
+    
+    elif schedule.mode == "delay" and schedule.seconds:
+        # Delay mode: 0 to min(delay_time, 60s) random delay
+        max_delay = min(schedule.seconds, 60)
+        return random.uniform(0, max_delay)
+    
+    else:
+        # Default: 0-5 seconds random delay
+        return random.uniform(0, 5)
+```
+
+#### Delay Strategy Examples
+
+| Task Type | Interval | Random Delay Range | Example |
+|-----------|----------|-------------------|---------|
+| Single execution | N/A | 0-10s | Task starts 0-10s after system startup |
+| Interval: 10s | 10s | 0-30s | Task starts 0-30s after startup, then every 10s |
+| Interval: 60s | 60s | 0-60s | Task starts 0-60s after startup, then every 60s |
+| Interval: 300s | 300s | 0-60s | Task starts 0-60s after startup, then every 300s |
+| Delay: 30s | 30s | 0-30s | Task starts 0-30s after startup, then 30s after completion |
+| Delay: 120s | 120s | 0-60s | Task starts 0-60s after startup, then 120s after completion |
+
+#### Performance Impact
+
+**Before Optimization:**
+```
+Time:    0s    10s   20s   30s   40s
+Task A:  |███  |███  |███  |███  |███
+Task B:  |███  |███  |███  |███  |███  
+Task C:  |███  |███  |███  |███  |███
+CPU:     100%  100%  100%  100%  100%
+```
+
+**After Optimization:**
+```
+Time:    0s    10s   20s   30s   40s
+Task A:  |███  |███  |███  |███  |███
+Task B:    |███  |███  |███  |███  |███
+Task C:      |███  |███  |███  |███  |███
+CPU:     ████████████████████████████
+```
+
+#### Key Benefits
+- **Eliminated Resource Spikes**: CPU usage becomes smooth instead of spiky
+- **Preserved Timing Accuracy**: Task execution intervals remain exactly as configured
+- **Improved Scalability**: System handles 100+ concurrent tasks efficiently
+- **Better Device Health**: Target devices receive distributed load instead of simultaneous bursts
+- **Minimal Configuration Impact**: No configuration changes required, works automatically
+
+#### Implementation Details
+- **First Execution Only**: Random delay applies only to initial task startup
+- **Preserved Intervals**: All subsequent executions maintain exact configured timing
+- **Intelligent Limits**: Maximum delays are capped to prevent excessive startup times
+- **Backward Compatible**: Existing configurations work without modification
+- **Enhanced Logging**: Startup delays are logged for monitoring and debugging
 
 ### Performance Optimization Features
 - **Regex Compilation Caching**: Compiled regex patterns are cached to avoid repeated compilation

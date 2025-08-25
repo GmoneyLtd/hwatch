@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import os
+import random
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -336,8 +337,35 @@ class TaskScheduler:
         except Exception as e:
             logger.warning(f"Failed to remove job {job_id} from scheduler: {e}")
 
+    def _calculate_start_delay(self, schedule) -> float:
+        """Calculate random start delay to prevent thundering herd effect
+
+        Args:
+            schedule: Task schedule configuration
+
+        Returns:
+            Random delay in seconds (0 to reasonable maximum)
+        """
+        if schedule.frequency == 1:
+            # Single execution: small random delay (0-10s)
+            return random.uniform(0, 10)
+
+        elif schedule.mode == "interval" and schedule.seconds:
+            # Interval mode: delay within 0 to min(interval * 3, 60s)
+            max_delay = min(schedule.seconds * 3, 60)
+            return random.uniform(0, max_delay)
+
+        elif schedule.mode == "delay" and schedule.seconds:
+            # Delay mode: delay within 0 to min(delay_time, 60s)
+            max_delay = min(schedule.seconds, 60)
+            return random.uniform(0, max_delay)
+
+        else:
+            # Default: small random delay
+            return random.uniform(0, 5)
+
     def schedule_task_for_device(self, task: TaskConfig, device: DeviceConfig):
-        """Schedule task for specific device"""
+        """Schedule task for specific device with staggered start time"""
         job_id = f"{task.alias}_{device.name}"
         schedule = task.schedule
 
@@ -349,28 +377,36 @@ class TaskScheduler:
             logger.info(f"Task {task.alias} is disabled, will not schedule job")
             return
 
+        # Calculate staggered start time to avoid thundering herd
+        start_delay = self._calculate_start_delay(schedule)
+        start_time = datetime.now() + timedelta(seconds=start_delay)
+
         # Schedule new job
         if schedule.frequency == 1:
             self.scheduler.add_job(
                 self._execute_job,
                 "date",
-                run_date=datetime.now() + timedelta(seconds=1),
+                run_date=start_time,
                 args=[task, device],
                 id=job_id,
             )
-            logger.info(f"Scheduled job {job_id} (execute once only).")
+            logger.info(f"Scheduled job {job_id} (execute once, start_delay in {start_delay:.1f}s).")
         elif schedule.mode == "interval" and schedule.seconds is not None:
             self.scheduler.add_job(
-                self._execute_job, IntervalTrigger(seconds=schedule.seconds), args=[task, device], id=job_id
+                self._execute_job,
+                IntervalTrigger(seconds=schedule.seconds),
+                args=[task, device],
+                id=job_id,
+                next_run_time=start_time,  # Set first execution time
             )
-            logger.info(f"Scheduled job {job_id} (interval mode, every {schedule.seconds} seconds).")
+            logger.info(f"Scheduled job {job_id} (interval {schedule.seconds}s, start_delay in {start_delay:.1f}s).")
         elif schedule.mode == "delay":
-            # First execution in delay mode is immediate
+            # First execution in delay mode with random delay
             self.scheduler.add_job(
                 self._execute_job,
                 "date",
-                run_date=datetime.now() + timedelta(seconds=1),
+                run_date=start_time,
                 args=[task, device],
                 id=job_id,
             )
-            logger.info(f"Scheduled job {job_id} (delay mode, first execution).")
+            logger.info(f"Scheduled job {job_id} (delay mode, start_delay in {start_delay:.1f}s).")
