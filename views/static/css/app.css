@@ -8,11 +8,15 @@
 @font-face {
     font-family: 'CeraRoundPro-Bold';
     src: url('../font/CeraRoundPro-Bold.woff2') format('woff2');
+    font-variant-numeric: tabular-nums;
+    /* 使数字等宽 全局启用避免数字宽度压缩 */
 }
 
 @font-face {
     font-family: 'CeraRoundPro-Regular';
     src: url('../font/CeraRoundPro-Regular.woff2') format('woff2');
+    font-variant-numeric: tabular-nums;
+    /* 使数字等宽 全局启用避免数字宽度压缩 */
 }
 
 .material-symbols-outlined {
