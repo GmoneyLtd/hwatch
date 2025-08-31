@@ -184,7 +184,8 @@ HWatch是一个基于Python构建的轻量级、高性能网络设备监控系�
 
 ## 🏗️ 系统架构
 
-```mermaid
+```
+# HWatch 系统 v0.1.4
 graph TB
     subgraph "HWatch 系统 v0.1.4"
         A[app.py] --> B[任务调度器]
@@ -287,10 +288,100 @@ graph TB
 - **Docker Compose**: 多容器编排
 - **Alpine Linux**: 轻量级容器基础镜像
 
+## 🚀 任务处理工作流程
+
+HWatch中的SSH和SNMP任务都遵循相同的处理工作流程，以确保一致性和可靠性：
+
+### 处理顺序
+1. **命令执行/查询执行**
+   - SSH任务：按顺序执行所有配置的命令
+   - SNMP任务：逐个查询每个OID（snmpget或snmpwalk）
+
+2. **结果收集**
+   - SSH任务：收集所有命令的输出并合并成单一文本
+   - SNMP任务：收集所有OID查询的结果并格式化
+
+3. **解析过程**
+   - SSH任务：使用单个正则表达式匹配整个合并输出
+   - SNMP任务：逐个处理每个OID结果部分
+
+4. **计算应用**
+   - SSH任务：对每个正则表达式捕获组应用计算规则
+   - SNMP任务：对每个OID值应用计算规则
+
+5. **标签关联**
+   - SSH任务：按顺序将计算后的捕获组值与标签关联
+   - SNMP任务：按顺序将计算后的OID值与标签关联
+
+6. **结果存储**
+   - 两种协议都返回一个字典，标签作为键，计算结果作为值
+   - 结果被传递给存储函数（SQLite或文件存储）
+
+### SNMP操作之间的关键差异
+
+#### SNMP Get vs SNMP Walk
+- **SNMP Get**：每个OID检索单个值，标签直接对应配置的标签
+- **SNMP Walk**：每个OID检索多个值（每个索引一个），标签会自动生成带后缀（例如`interfaceInBytes.1`、`interfaceInBytes.2`）
+
+#### 处理示例
+
+**SNMP Get处理**：
+```yaml
+labels:
+  - "firstValue"    # 对应OID 1
+  - "secondValue"   # 对应OID 2
+snmp:
+  oid:
+    - "1.3.6.1.2.1.1.3.0"  # OID 1
+    - "1.3.6.1.2.1.1.3.0"  # OID 2
+  type:
+    - "snmpget"
+    - "snmpget"
+  parse:
+    calculate:
+      - "*2"        # 应用于OID 1值
+      - "/1000"     # 应用于OID 2值
+```
+
+**SNMP Walk处理**：
+```yaml
+labels:
+  - "interfaceInBytes"   # OID 1的基础标签
+  - "interfaceOutBytes"  # OID 2的基础标签
+snmp:
+  oid:
+    - "1.3.6.1.2.1.2.2.1.10"  # OID 1 (ifInOctets)
+    - "1.3.6.1.2.1.2.2.1.16"  # OID 2 (ifOutOctets)
+  type:
+    - "snmpwalk"
+    - "snmpwalk"
+  parse:
+    calculate:
+      - "/1024"     # 应用于OID 1的所有值
+      - "/1024"     # 应用于OID 2的所有值
+```
+
+如果Walk返回：
+```
+OID 1: 1.3.6.1.2.1.2.2.1.10 (snmpwalk)
+102400  # 索引1值
+204800  # 索引2值
+
+OID 2: 1.3.6.1.2.1.2.2.1.16 (snmpwalk)
+51200   # 索引1值
+153600  # 索引2值
+```
+
+生成的标签和值：
+- `interfaceInBytes.1`: 100.0 (102400/1024)
+- `interfaceInBytes.2`: 200.0 (204800/1024)
+- `interfaceOutBytes.1`: 50.0 (51200/1024)
+- `interfaceOutBytes.2`: 150.0 (153600/1024)
+
 ## 📊 模块架构
 
 ### 1. 应用程序入口 (`app.py`)
-```mermaid
+```
 graph LR
     A[信号处理器] --> B[优雅关闭]
     C[主循环] --> D[数据库初始化]
@@ -313,7 +404,7 @@ graph LR
 - **错误处理**: 全面的错误恢复和日志记录
 
 ### 2. 任务调度器 (`core/scheduler.py`)
-```mermaid
+```
 graph TB
     A[任务调度器] --> B[调度所有任务]
     A --> C[增量更新]
@@ -340,7 +431,7 @@ graph TB
 - **执行限制**: 控制任务执行频率和生命周期
 
 ### 3. 数据采集器 (`core/collector.py`)
-```mermaid
+```
 graph TB
     A[运行任务] --> B{协议类型}
     
@@ -373,7 +464,7 @@ graph TB
 - **性能优化**: 正则表达式编译缓存和定期清理
 
 ### 4. Web服务器 (`core/web_server.py`)
-```mermaid
+```
 graph TB
     A[FastAPI应用] --> B[身份认证]
     A --> C[静态文件]
@@ -402,7 +493,7 @@ graph TB
 - **帮助系统**: 通过帮助图标或/help路由访问的内置文档
 
 ### 5. 配置系统 (`core/config_loader.py`)
-```mermaid
+```
 graph LR
     A[config.yaml] --> B[YAML解析器]
     B --> C[验证]
@@ -426,7 +517,7 @@ graph LR
 - **类型安全**: 强类型的配置对象
 
 ### 6. 数据库层 (`core/database.py`)
-```mermaid
+```
 graph TB
     A[数据库管理器] --> B[SQLite连接]
     A --> C[模式管理]
@@ -451,7 +542,7 @@ graph TB
 - **连接管理**: 正确的连接生命周期处理
 
 ### 7. 批量写入器 (`core/batch_writer.py`) - v0.1.4新增
-```mermaid
+```
 graph TB
     A[批量写入器] --> B[缓冲区管理]
     A --> C[异步写入]
@@ -477,7 +568,7 @@ graph TB
 - **资源管理**: 自动任务管理和优雅关闭
 
 ### 8. 文件缓冲器 (`core/file_buffer.py`) - v0.1.4新增
-```mermaid
+```
 graph TB
     A[文件缓冲器] --> B[异步文件I/O]
     A --> C[缓冲管理]
@@ -503,7 +594,7 @@ graph TB
 - **资源优化**: 文件句柄复用和自动清理
 
 ### 9. 性能监控器 (`core/performance_monitor.py`) - v0.1.4新增
-```mermaid
+```
 graph TB
     A[性能监控器] --> B[实时指标]
     A --> C[资源监控]
@@ -529,7 +620,7 @@ graph TB
 - **API集成**: 通过Web API提供监控数据访问
 
 ### 10. 连接缓存 (`core/connection_cache.py`) - v0.1.4新增
-```mermaid
+```
 graph TB
     A[连接缓存] --> B[SSH连接池]
     A --> C[SNMP引擎池]
@@ -555,7 +646,7 @@ graph TB
 - **内存优化**: 实现42.9%的内存节省效果
 
 ### 11. 字符串优化器 (`core/string_optimizer.py`) - v0.1.4新增
-```mermaid
+```
 graph TB
     A[字符串优化器] --> B[字符串内化]
     A --> C[模板缓存]
@@ -590,7 +681,7 @@ graph TB
 ### 安装方法
 
 #### 方法1: 使用UV (推荐)
-```bash
+```
 # 克隆仓库
 git clone <repository-url>
 cd hwatch
@@ -607,7 +698,7 @@ uv run python app.py
 ```
 
 #### 方法2: 使用Docker
-```bash
+```
 # 克隆仓库
 git clone <repository-url>
 cd hwatch
@@ -626,7 +717,7 @@ docker buildx build --no-cache --platform linux/amd64,linux/arm64 \
 ```
 
 #### 方法3: 传统Python
-```bash
+```
 # 克隆仓库
 git clone <repository-url>
 cd hwatch
@@ -656,13 +747,13 @@ python app.py
 **重要:** YAML支持两种等效的列表语法。两种形式都有效且可互换:
 
 #### 流语法 (内联)
-```yaml
+```
 targets: ["Router_A", "Fortinet_60"]
 labels: ["BIOS_Version", "Branch_Point"]
 ```
 
 #### 块语法 (多行)
-```yaml
+```
 targets:
 - "Router_A"
 - "Fortinet_60"
@@ -684,7 +775,7 @@ labels:
 
 每个设备包含基本信息和连接配置:
 
-```yaml
+```
 devices:
 - name: "Router_A"              # 设备标识符，必须唯一
   ip: "192.168.1.100"           # 设备IP地址
@@ -705,7 +796,7 @@ devices:
 ### 任务配置 (tasks)
 
 #### 基本配置字段
-```yaml
+```
 tasks:
 - alias: "task_alias"           # 唯一任务标识符
   enabled: true                 # 是否启用任务
@@ -719,7 +810,7 @@ tasks:
 **注意:** 上面的 `targets` 字段使用块语法。您也可以使用流语法写成 `targets: ["Router_A", "Fortinet_60"]`。
 
 #### 调度配置 (schedule)
-```yaml
+```
 schedule:
   frequency: 0                  # 执行次数限制，0表示无限制
   mode: "interval"              # 调度模式: interval 或 delay
@@ -733,7 +824,7 @@ schedule:
 #### SSH任务配置 (新的协议分离格式)
 
 **单命令执行:**
-```yaml
+```
 - alias: "get_router_version"
   enabled: true
   protocol: "ssh"
@@ -747,7 +838,7 @@ schedule:
 ```
 
 **多命令执行:**
-```yaml
+```
 - alias: "system_check"
   enabled: true
   protocol: "ssh"
@@ -764,7 +855,7 @@ schedule:
 ```
 
 **带数据解析的SSH任务:**
-```yaml
+```
 - alias: "parse_system_info"
   enabled: true
   protocol: "ssh"
@@ -790,7 +881,7 @@ schedule:
 #### SNMP任务配置 (新的混合操作格式)
 
 **SNMP Get (单值获取):**
-```yaml
+```
 - alias: "memory_usage"
   enabled: true
   protocol: "snmp"
@@ -810,7 +901,7 @@ schedule:
 ```
 
 **SNMP Walk (多值获取和自动生成标签):**
-```yaml
+```
 - alias: "processor_usage"
   enabled: true
   protocol: "snmp"
@@ -830,7 +921,7 @@ schedule:
 ```
 
 **混合SNMP操作 (高级):**
-```yaml
+```
 - alias: "mixed_snmp_monitoring"
   enabled: true
   protocol: "snmp"
@@ -858,7 +949,7 @@ schedule:
 ### 数据解析配置 (parse)
 
 #### 正则表达式解析
-```yaml
+```
 parse:
   regex: "(?s)BIOS version:\\s*(\\d+).*?Branch point:\\s*(\\d+)"
   calculate:
@@ -894,7 +985,7 @@ parse:
 - **混合操作**: 在单个任务中无缝处理两种类型
 
 #### 智能标签映射
-```yaml
+```
 labels:
 - "SessionCount"    # snmpget -> "SessionCount"
 - "CPUUsage"        # snmpwalk -> "CPUUsage.1", "CPUUsage.2", "CPUUsage.3", "CPUUsage.4"
@@ -911,7 +1002,7 @@ labels:
 
 以下是使用新的协议分离配置的完整示例:
 
-```yaml
+```
 devices:
 - name: "Router_A"
   ip: "192.168.1.100"

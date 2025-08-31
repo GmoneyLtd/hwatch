@@ -41,9 +41,23 @@ devices:
       username: admin
   ip: 192.168.2.11
   name: AP-205
+- connection:
+    snmp:
+      community: hwatch
+      port: 161
+      retry: 0
+      timeout: 2
+    ssh:
+      password: admin
+      port: 22
+      retry: 0
+      timeout: 2
+      username: Admin#123
+  ip: 192.168.100.200
+  name: AP-303
 tasks:
 - alias: run_show_command
-  enabled: true
+  enabled: false
   labels:
   - BIOS_Version
   - Branch_Point
@@ -51,7 +65,7 @@ tasks:
   schedule:
     frequency: 20
     mode: delay
-    seconds: 120
+    seconds: 15
   ssh:
     command:
     - get system status
@@ -61,7 +75,7 @@ tasks:
       - /1000000
       - '*10'
       regex: (?s)BIOS version:\s*(\d+).*?Branch point:\s*(\d+)
-  storage: file
+  storage: sqlite
   targets:
   - Fortinet_60
 - alias: get_router_a_version
@@ -104,7 +118,7 @@ tasks:
   targets:
   - Router_A
 - alias: fgProcessorUsage_per
-  enabled: true
+  enabled: false
   labels:
   - fgProcessorUsage
   protocol: snmp
@@ -121,7 +135,7 @@ tasks:
   targets:
   - Fortinet_60
 - alias: mixed_snmp_monitoring
-  enabled: true
+  enabled: false
   labels:
   - SessionCount
   - CPUUsage
@@ -144,7 +158,7 @@ tasks:
   targets:
   - Fortinet_60
 - alias: system_info_collection
-  enabled: true
+  enabled: false
   labels:
   - SysUpTimeDays
   - SysDescr
@@ -152,8 +166,8 @@ tasks:
   protocol: snmp
   schedule:
     frequency: 0
-    mode: interval
-    seconds: 60
+    mode: delay
+    seconds: 15
   snmp:
     oid:
     - 1.3.6.1.2.1.1.3.0
@@ -193,3 +207,32 @@ tasks:
   storage: sqlite
   targets:
   - Fortinet_60
+- alias: ap-303_snmp
+  enabled: true
+  labels:
+  - apUptime
+  - freeMemory
+  - cpuUsage
+  protocol: snmp
+  schedule:
+    frequency: 0
+    mode: interval
+    seconds: 10
+  snmp:
+    oid:
+    - 1.3.6.1.4.1.14823.2.3.3.1.2.1.1.9.252.127.241.205.153.4
+    - 1.3.6.1.4.1.14823.2.3.3.1.2.1.1.8.252.127.241.205.153.4
+    - 1.3.6.1.4.1.14823.2.3.3.1.2.1.1.7.252.127.241.205.153.4
+    parse:
+      regex: "(.*)"  # 简单的正则表达式，匹配所有内容
+      calculate:
+      - ''
+      - /487792640
+      - ''
+    type:
+    - snmpget
+    - snmpget
+    - snmpget
+  storage: file
+  targets:
+  - AP-303

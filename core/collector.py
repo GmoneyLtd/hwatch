@@ -638,39 +638,102 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
     elif task.protocol == "snmp" and task.snmp:
         parse_config = task.snmp.parse
 
+    # For SNMP tasks, always use SNMP-specific parsing logic regardless of regex configuration
+    if task.protocol == "snmp":
+        # For multi-OID (SNMP) tasks, extract individual results
+        if "OID " in output:
+            # Extract values from formatted output (OID X: ...)
+            lines = output.split("\n\n")  # Split by double newlines (separator between OIDs)
+
+            # Generate labels based on actual SNMP results structure
+            result = _generate_labels_from_snmp_results(task, lines, parse_config)
+
+            return result
+        else:
+            # Single value output - original logic for backward compatibility
+            # If only one label, use entire output as value for that label
+            if len(task.labels) == 1:
+                raw_value = output.strip()
+
+                # Check if calculation is needed
+                if parse_config and parse_config.calculate and len(parse_config.calculate) > 0:
+                    calculated_value = _calculate_value(raw_value, parse_config.calculate[0])
+                    if calculated_value is None:
+                        logger.warning(f"Task {task.alias} calculation failed, not storing result")
+                        return None
+                    return {task.labels[0]: str(calculated_value)}
+
+                return {task.labels[0]: raw_value}
+
+            # If multiple labels, try splitting output by lines
+            lines = [line.strip() for line in output.strip().split("\n") if line.strip()]
+            result = {}
+
+            # Match each line result with corresponding label
+            for i, label in enumerate(task.labels):
+                if i < len(lines):
+                    raw_value = lines[i]
+
+                    # Check if calculation is needed
+                    if (
+                        parse_config
+                        and parse_config.calculate
+                        and i < len(parse_config.calculate)
+                        and parse_config.calculate[i]
+                    ):
+                        calculated_value = _calculate_value(raw_value, parse_config.calculate[i])
+                        if calculated_value is None:
+                            logger.warning(f"Task {task.alias} label {label} calculation failed, not storing result")
+                            return None
+                        result[label] = str(calculated_value)
+                    else:
+                        result[label] = raw_value
+                else:
+                    result[label] = ""  # Set to empty string if insufficient lines
+
+            return result
+
     # If parse is None, means no regex matching needed, directly match results with labels
     if not parse_config or not parse_config.regex:
-        # For multi-command (SSH) or multi-OID (SNMP) tasks, extract individual results
-        if "Command " in output or "OID " in output:
-            # Extract values from formatted output (Command X: ... or OID X: ...)
-            lines = output.split("\n\n")  # Split by double newlines (separator between commands/OIDs)
+        # For multi-command (SSH) tasks, extract individual results
+        if "Command " in output:
+            # Extract values from formatted output (Command X: ...)
+            lines = output.split("\n\n")  # Split by double newlines (separator between commands)
             extracted_values = []
 
             for section in lines:
                 if section.strip():
-                    # Split each section by lines and get the content after the first line (which contains Command/OID info)
+                    # Split each section by lines and get the content after the first line (which contains Command info)
                     section_lines = section.strip().split("\n")
                     if len(section_lines) > 1:
                         # Join all lines except the first one (header line)
                         content = "\n".join(section_lines[1:]).strip()
-
-                        # For SNMP tasks, check if this OID uses snmpwalk and generate dynamic labels
-                        if (
-                            "OID " in section
-                            and task.protocol == "snmp"
-                            and task.snmp
-                            and "snmpwalk" in section_lines[0]
-                        ):  # Check if header contains snmpwalk
-                            # Split content by lines - each line is a separate value from snmpwalk
-                            walk_values = [line.strip() for line in content.split("\n") if line.strip()]
-                            extracted_values.extend(walk_values)  # Add all values from this OID
-                        else:
-                            extracted_values.append(content)
+                        extracted_values.append(content)
                     else:
                         extracted_values.append("")  # Empty if no content
 
-            # Generate labels based on actual SNMP results structure
-            result = _generate_labels_from_snmp_results(task, lines, parse_config)
+            # For SSH tasks without regex, match extracted values with labels
+            result = {}
+            for i, label in enumerate(task.labels):
+                if i < len(extracted_values):
+                    raw_value = extracted_values[i]
+
+                    # Check if calculation is needed
+                    if (
+                        parse_config
+                        and parse_config.calculate
+                        and i < len(parse_config.calculate)
+                        and parse_config.calculate[i]
+                    ):
+                        calculated_value = _calculate_value(raw_value, parse_config.calculate[i])
+                        if calculated_value is None:
+                            logger.warning(f"Task {task.alias} label {label} calculation failed, not storing result")
+                            return None
+                        result[label] = str(calculated_value)
+                    else:
+                        result[label] = raw_value
+                else:
+                    result[label] = ""  # Set to empty string if insufficient values
 
             return result
 
@@ -718,7 +781,7 @@ def _parse_output(output: str, task: TaskConfig) -> dict[str, Any] | None:
 
             return result
 
-    # Parse output using regular expression
+    # Parse output using regular expression (SSH tasks only)
     compiled_regex = _get_compiled_regex(parse_config.regex)
     match = compiled_regex.search(output)
 

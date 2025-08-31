@@ -156,9 +156,99 @@ HWatch is a lightweight, high-performance network device monitoring system built
 - Real-time task execution monitoring
 - Device connectivity status tracking
 
+## 🚀 Task Processing Workflow
+
+Both SSH and SNMP tasks in HWatch follow the same processing workflow to ensure consistency and reliability:
+
+### Processing Order
+1. **Command Execution/Query Execution**
+   - SSH tasks: Execute all configured commands sequentially
+   - SNMP tasks: Query each OID individually (snmpget or snmpwalk)
+
+2. **Result Collection**
+   - SSH tasks: Collect output from all commands and merge into a single text
+   - SNMP tasks: Collect results from all OID queries and format them
+
+3. **Parsing Process**
+   - SSH tasks: Use a single regular expression to match the entire merged output
+   - SNMP tasks: Process each OID result section individually
+
+4. **Calculation Application**
+   - SSH tasks: Apply calculation rules to each regex capture group
+   - SNMP tasks: Apply calculation rules to each OID value
+
+5. **Label Association**
+   - SSH tasks: Associate calculated capture group values with labels in order
+   - SNMP tasks: Associate calculated OID values with labels in order
+
+6. **Result Storage**
+   - Both protocols return a dictionary with labels as keys and calculated results as values
+   - Results are passed to storage functions (SQLite or file storage)
+
+### Key Differences Between SNMP Operations
+
+#### SNMP Get vs SNMP Walk
+- **SNMP Get**: Retrieves a single value per OID, labels correspond directly to configured labels
+- **SNMP Walk**: Retrieves multiple values per OID (one for each index), labels are automatically generated with suffixes (e.g., `interfaceInBytes.1`, `interfaceInBytes.2`)
+
+#### Processing Examples
+
+**SNMP Get Processing**:
+```yaml
+labels:
+  - "firstValue"    # Corresponds to OID 1
+  - "secondValue"   # Corresponds to OID 2
+snmp:
+  oid:
+    - "1.3.6.1.2.1.1.3.0"  # OID 1
+    - "1.3.6.1.2.1.1.3.0"  # OID 2
+  type:
+    - "snmpget"
+    - "snmpget"
+  parse:
+    calculate:
+      - "*2"        # Apply to OID 1 value
+      - "/1000"     # Apply to OID 2 value
+```
+
+**SNMP Walk Processing**:
+```yaml
+labels:
+  - "interfaceInBytes"   # Base label for OID 1
+  - "interfaceOutBytes"  # Base label for OID 2
+snmp:
+  oid:
+    - "1.3.6.1.2.1.2.2.1.10"  # OID 1 (ifInOctets)
+    - "1.3.6.1.2.1.2.2.1.16"  # OID 2 (ifOutOctets)
+  type:
+    - "snmpwalk"
+    - "snmpwalk"
+  parse:
+    calculate:
+      - "/1024"     # Apply to all values from OID 1
+      - "/1024"     # Apply to all values from OID 2
+```
+
+If Walk returns:
+```
+OID 1: 1.3.6.1.2.1.2.2.1.10 (snmpwalk)
+102400  # Index 1 value
+204800  # Index 2 value
+
+OID 2: 1.3.6.1.2.1.2.2.1.16 (snmpwalk)
+51200   # Index 1 value
+153600  # Index 2 value
+```
+
+Generated labels and values:
+- `interfaceInBytes.1`: 100.0 (102400/1024)
+- `interfaceInBytes.2`: 200.0 (204800/1024)
+- `interfaceOutBytes.1`: 50.0 (51200/1024)
+- `interfaceOutBytes.2`: 150.0 (153600/1024)
+
 ## 🏗️ System Architecture
 
-```mermaid
+```
 graph TB
     subgraph "HWatch System v0.1.4"
         A[app.py] --> B[TaskScheduler]
@@ -848,7 +938,7 @@ labels: ["BIOS_Version", "Branch_Point"]
 ```
 
 #### Block Syntax (Multi-line)
-```yaml
+```
 targets:
 - "Router_A"
 - "Fortinet_60"
