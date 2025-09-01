@@ -48,13 +48,27 @@ devices:
       retry: 0
       timeout: 2
     ssh:
-      password: admin
+      password: Admin#123
       port: 22
       retry: 0
       timeout: 2
-      username: Admin#123
+      username: admin
   ip: 192.168.100.200
-  name: AP-303
+  name: ap-303
+- connection:
+    snmp:
+      community: hwatch
+      port: 161
+      retry: 0
+      timeout: 2
+    ssh:
+      password: Admin#123
+      port: 22
+      retry: 2
+      timeout: 10
+      username: admin
+  ip: 192.168.100.201
+  name: vmc
 tasks:
 - alias: run_show_command
   enabled: false
@@ -208,7 +222,7 @@ tasks:
   targets:
   - Fortinet_60
 - alias: ap-303_snmp
-  enabled: true
+  enabled: false
   labels:
   - apUptime
   - freeMemory
@@ -224,15 +238,49 @@ tasks:
     - 1.3.6.1.4.1.14823.2.3.3.1.2.1.1.8.252.127.241.205.153.4
     - 1.3.6.1.4.1.14823.2.3.3.1.2.1.1.7.252.127.241.205.153.4
     parse:
-      regex: "(.*)"  # 简单的正则表达式，匹配所有内容
       calculate:
       - ''
       - /487792640
       - ''
+      regex: (.*)
     type:
     - snmpget
     - snmpget
     - snmpget
   storage: sqlite
   targets:
-  - AP-303
+  - ap-303
+- alias: ap-303_ssh
+  enabled: false
+  labels:
+  - ids_clients
+  - ids_aps
+  protocol: ssh
+  schedule:
+    frequency: 0
+    mode: interval
+    seconds: 10
+  ssh:
+    command:
+    - show ids clients
+    - show ids
+    parse:
+      regex: (.*?Total:\d+){2}
+  storage: file
+  targets:
+  - ap-303
+- alias: show_command
+  enabled: true
+  protocol: ssh
+  schedule:
+    frequency: 0
+    mode: delay
+    seconds: 10
+  ssh:
+    command:
+    - no paging
+    - clock cli-timestam
+    - show datapath session counters
+  storage: file
+  targets:
+  - vmc

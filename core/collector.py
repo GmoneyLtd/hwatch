@@ -295,10 +295,21 @@ async def _run_ssh_task(
 
                     # Ensure returned is str type
                     stdout = result.stdout
+                    stderr = result.stderr
                     if isinstance(stdout, bytes):
                         stdout = stdout.decode("utf-8", errors="replace")
+                    if isinstance(stderr, bytes):
+                        stderr = stderr.decode("utf-8", errors="replace")
 
-                    all_results.append(f"Command {cmd_index}: {command}\n{stdout or ''}")
+                    # Combine stdout and stderr to ensure we capture all output
+                    # Some devices send output to stderr instead of stdout
+                    combined_output = ""
+                    if stdout:
+                        combined_output += stdout
+                    if stderr:
+                        combined_output += stderr
+
+                    all_results.append(f"Command {cmd_index}: {command}\n{combined_output or ''}")
                     command_success = True
                     successful_commands += 1
                     break
