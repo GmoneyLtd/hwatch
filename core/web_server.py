@@ -377,18 +377,20 @@ async def get_tasks(user: dict = current_user_dependency):
                 "has_parse": task.snmp.parse is not None,
             }
 
-        task_list.append({
-            "alias": task.alias,
-            "targets": target_devices,
-            "target_ips": target_ips,
-            "protocol": task.protocol,
-            "type": protocol_type,
-            "protocol_details": protocol_details,
-            "schedule_mode": task.schedule.mode or "run_once",
-            "schedule_seconds": task.schedule.seconds or 0,
-            "storage": task.storage or "null",
-            "enabled": task.enabled,
-        })
+        task_list.append(
+            {
+                "alias": task.alias,
+                "targets": target_devices,
+                "target_ips": target_ips,
+                "protocol": task.protocol,
+                "type": protocol_type,
+                "protocol_details": protocol_details,
+                "schedule_mode": task.schedule.mode or "run_once",
+                "schedule_seconds": task.schedule.seconds or 0,
+                "storage": task.storage or "null",
+                "enabled": task.enabled,
+            }
+        )
     return task_list
 
 
@@ -585,14 +587,16 @@ async def get_chart_data_api(
                 border_color = _generate_chart_color(color_index)
                 background_color = _get_background_color(border_color)
 
-                datasets.append({
-                    "label": chart_label,
-                    "data": series_info["data"],
-                    "borderColor": border_color,
-                    "backgroundColor": background_color,
-                    "fill": False,
-                    "tension": 0.1,
-                })
+                datasets.append(
+                    {
+                        "label": chart_label,
+                        "data": series_info["data"],
+                        "borderColor": border_color,
+                        "backgroundColor": background_color,
+                        "fill": False,
+                        "tension": 0.1,
+                    }
+                )
 
         response_data["datasets"] = datasets
         # 确保返回完整的labels列表, 而不是只返回当前选中的label
@@ -671,14 +675,16 @@ async def get_chart_data_api(
                 border_color = _generate_chart_color(color_index)
                 background_color = _get_background_color(border_color)
 
-                datasets.append({
-                    "label": label,
-                    "data": series_info["data"],
-                    "borderColor": border_color,
-                    "backgroundColor": background_color,
-                    "fill": False,
-                    "tension": 0.1,
-                })
+                datasets.append(
+                    {
+                        "label": label,
+                        "data": series_info["data"],
+                        "borderColor": border_color,
+                        "backgroundColor": background_color,
+                        "fill": False,
+                        "tension": 0.1,
+                    }
+                )
 
         response_data["datasets"] = datasets
 

@@ -270,7 +270,7 @@ tasks:
   targets:
   - ap-303
 - alias: show_command
-  enabled: true
+  enabled: false
   protocol: ssh
   schedule:
     frequency: 0

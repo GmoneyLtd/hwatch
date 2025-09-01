@@ -31,6 +31,21 @@ class TaskScheduler:
     async def _execute_job(self, task: TaskConfig, device: DeviceConfig):
         """Wrapper function for actually executing a single job."""
         job_id = f"{task.alias}_{device.name}"
+
+        # Check if the task is still enabled in the current configuration
+        # This prevents race conditions where a job starts just as the configuration is reloaded and the task is disabled.
+        try:
+            current_task_config = next(t for t in self.config.tasks if t.alias == task.alias)
+            if not current_task_config.enabled:
+                logger.info(f"Task {task.alias} has been disabled, skipping execution of job {job_id}.")
+                return  # Stop execution if disabled
+        except StopIteration:
+            logger.info(f"Task {task.alias} has been removed, skipping execution of job {job_id}.")
+            return  # Stop execution if removed
+
+        # Use the most up-to-date task configuration for the execution
+        task = current_task_config
+
         # Record task start time
         start_time = datetime.now()
         logger.info(f"Starting job execution: {job_id}")
