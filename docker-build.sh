@@ -9,7 +9,7 @@ set -e
 REGISTRY="registry.cn-hangzhou.aliyuncs.com"
 NAMESPACE="gmoneyltd"
 IMAGE_NAME="hwatch"
-VERSION="0.1.8"
+VERSION="0.1.9"
 PLATFORMS="linux/amd64,linux/arm64"
 
 # 构建完整的镜像标签
