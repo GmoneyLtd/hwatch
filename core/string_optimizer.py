@@ -1,5 +1,4 @@
 import io
-import time
 from datetime import datetime
 from string import Template
 from typing import Any

@@ -1,8 +1,7 @@
 import asyncio
 import time
-from collections import defaultdict
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
 

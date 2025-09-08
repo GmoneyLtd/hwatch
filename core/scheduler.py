@@ -12,7 +12,6 @@ from loguru import logger
 from core.batch_writer import batch_save_result
 from core.collector import run_task
 from core.config_loader import AppConfig, DeviceConfig, TaskConfig
-from core.database import save_result
 from core.error_handler import error_handler
 from core.file_buffer import get_file_buffer
 

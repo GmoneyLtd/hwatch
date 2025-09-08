@@ -7,11 +7,9 @@ import sys
 import uvicorn
 from loguru import logger
 
-from core.batch_writer import batch_writer
 from core.collector import cleanup_all_connections
-from core.config_loader import AppConfig, load_config
+from core.config_loader import load_config
 from core.database import close_db, init_db
-from core.file_buffer import get_file_buffer
 
 # Import optimization modules
 # from core.performance_monitor import performance_monitor

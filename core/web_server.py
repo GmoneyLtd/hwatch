@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 
 # Import project modules
-from core.config_loader import AppConfig, load_config
+from core.config_loader import AppConfig
 from core.database import get_available_devices, get_available_labels, get_available_tasks, get_chart_data
 
 # from core.monitoring_api import monitoring_router

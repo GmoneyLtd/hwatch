@@ -5,11 +5,10 @@ Enhanced error handling and classification system
 import asyncio
 import time
 from collections import defaultdict
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
 

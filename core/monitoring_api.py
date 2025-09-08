@@ -3,7 +3,6 @@ Monitoring API endpoints for performance and error tracking
 """
 
 from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
