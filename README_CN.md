@@ -185,7 +185,6 @@ HWatch是一个基于Python构建的轻量级、高性能网络设备监控系�
 ## 🏗️ 系统架构
 
 ```
-# HWatch 系统 v0.1.4
 graph TB
     subgraph "HWatch 系统 v0.1.4"
         A[app.py] --> B[任务调度器]
